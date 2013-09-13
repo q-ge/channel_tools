@@ -10,3 +10,4 @@ mult
 mvec
 speed_sparse
 stride
+test/matrix1

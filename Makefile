@@ -35,7 +35,13 @@ SPARSE_OBJS+= sparse_avx.o
 EXECUTABLES+= mvec 
 endif
 
+TESTS=test/matrix1
+
+.PHONY: default test clean
+
 default: ${EXECUTABLES}
+
+test: ${TESTS}
 
 cpu.mk:
 	./cpu_probe.sh
@@ -77,7 +83,10 @@ extract_plot: extract_plot.o ${SPARSE_OBJS}
 
 stride: stride.o ${SPARSE_OBJS}
 
-.PHONY: clean
+# Tests
+
+test/matrix1: test/raw_samples1.xz channel_matrix
+	xzcat $< | ./channel_matrix $@
 
 clean:
-	rm -f *.o ${EXECUTABLES} cpu.mk
+	rm -f *.o ${EXECUTABLES} ${TESTS} cpu.mk
