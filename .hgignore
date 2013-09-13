@@ -1,0 +1,12 @@
+syntax: glob
+*.o
+cpu.mk
+analyse
+analyse_mat
+capacity
+channel_matrix
+extract_plot
+mult
+mvec
+speed_sparse
+stride
