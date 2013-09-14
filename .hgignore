@@ -11,3 +11,4 @@ mvec
 speed_sparse
 stride
 test/matrix1
+sample_error

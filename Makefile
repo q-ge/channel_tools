@@ -1,4 +1,7 @@
-CFLAGS=-Wall -Werror
+CFLAGS=-Wall# -Werror
+CFLAGS+=-DDSFMT_MEXP=521
+
+dSFMT_SRC=dSFMT-src-2.2.1
 
 include cpu.mk
 
@@ -23,7 +26,7 @@ ifdef CAP_BENCH
 endif
 
 EXECUTABLES=speed_sparse channel_matrix analyse capacity analyse_mat \
-            mult stride extract_plot
+            mult stride extract_plot sample_error
 ifdef DEBUG
 EXECUTABLES+= test_sparse
 endif
@@ -82,6 +85,10 @@ mult_lin: LDFLAGS+= -lrt
 extract_plot: extract_plot.o ${SPARSE_OBJS}
 
 stride: stride.o ${SPARSE_OBJS}
+
+sample_error: LDFLAGS+= -lm
+sample_error: sample_error.o ${SPARSE_OBJS} channel_algorithms.o \
+              log.o fastexp.o ${dSFMT_SRC}/dSFMT.o
 
 # Tests
 
