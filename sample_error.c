@@ -23,6 +23,29 @@ sample(dv_t *cp, dsfmt_t *rng) {
     return s;
 }
 
+#define N 16
+
+void
+sample_v(dv_t *cp, dsfmt_t *rng, int *r) {
+    double x[N];
+    int i;
+
+    dsfmt_fill_array_close_open(rng, x, N);
+
+    for(i= 0; i < N; i++) {
+        int s= 0, e= cp->length;
+
+        while(s+1 < e) {
+            int m= (s+e)/2;
+
+            if(x[i] < cp->entries[m]) e= m;
+            else                      s= m;
+        }
+
+        r[i]= s;
+    }
+}
+
 csc_mat_t *
 sampled_matrix(dv_t *cp, int cols, int samples, dsfmt_t *rng) {
     bsc_hist_t *H;
@@ -33,10 +56,22 @@ sampled_matrix(dv_t *cp, int cols, int samples, dsfmt_t *rng) {
     for(c= 0; c < cols; c++) {
         int i;
 
+#if 0
         for(i= 0; i < samples; i++) {
             int r= sample(cp, rng);
             bsc_hist_count(H, c, r, 1);
         }
+#else
+        for(i= 0; i < samples/N; i++) {
+            int r[N];
+            int j;
+
+            sample_v(cp, rng, r);
+
+            for(j= 0; j < N; j++)
+                bsc_hist_count(H, c, r[j], 1);
+        }
+#endif
     }
     M= bsc_normalise(H);
     bsc_hist_destroy(H);
@@ -51,6 +86,7 @@ main(int argc, char *argv[]) {
     dv_t *cum_prob;
     dsfmt_t rng;
     int samples;
+    struct timespec start, end;
 
     if(argc < 3) {
         fprintf(stderr,
@@ -107,7 +143,19 @@ main(int argc, char *argv[]) {
 
     dsfmt_init_gen_rand(&rng, time(NULL));
 
-    sampled_matrix(cum_prob, M->ncol, samples, &rng);
+    {
+        int i;
+        double t;
+
+        clock_gettime(CLOCK_MONOTONIC, &start);
+        for(i= 0; i < 100; i++) {
+            sampled_matrix(cum_prob, M->ncol, samples, &rng);
+        }
+        clock_gettime(CLOCK_MONOTONIC, &end);
+        t= (end.tv_sec + end.tv_nsec*1e-9)
+         - (start.tv_sec + start.tv_nsec*1e-9);
+        printf("%.3fms\n", (t / 100) * 1000);
+    }
 
     dv_destroy(cum_prob);
     csc_mat_destroy(M);

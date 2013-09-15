@@ -599,7 +599,7 @@ stripe_mat(csc_mat_t *M, int stripe_width) {
         for(c= 0; c < M->ncol; c++) {
             int i;
 
-            assert(M->rows[stripe_col_starts[c]] >= start_row);
+            //assert(M->rows[stripe_col_starts[c]] >= start_row);
 
             /* Stay within both the column, and the (row) span
                of the stripe.  */

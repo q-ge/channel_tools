@@ -26,7 +26,7 @@ ifdef CAP_BENCH
 endif
 
 EXECUTABLES=speed_sparse channel_matrix analyse capacity analyse_mat \
-            mult stride extract_plot sample_error
+            mult stride extract_plot sample_error channel_hist
 ifdef DEBUG
 EXECUTABLES+= test_sparse
 endif
@@ -86,9 +86,11 @@ extract_plot: extract_plot.o ${SPARSE_OBJS}
 
 stride: stride.o ${SPARSE_OBJS}
 
-sample_error: LDFLAGS+= -lm
+sample_error: LDFLAGS+= -lm -lrt
 sample_error: sample_error.o ${SPARSE_OBJS} channel_algorithms.o \
               log.o fastexp.o ${dSFMT_SRC}/dSFMT.o
+
+channel_hist: channel_hist.o ${SPARSE_OBJS}
 
 # Tests
 
@@ -96,4 +98,4 @@ test/matrix1: test/raw_samples1.xz channel_matrix
 	xzcat $< | ./channel_matrix $@
 
 clean:
-	rm -f *.o ${EXECUTABLES} ${TESTS} cpu.mk
+	rm -f *.o ${dSFMT_SRC}/*.o ${EXECUTABLES} ${TESTS} cpu.mk
