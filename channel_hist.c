@@ -48,8 +48,9 @@ main(int argc, char *argv[]) {
 
     for(c= 0; c < H->end_col; c++) {
         for(r= H->start_rows[c]; r < H->end_rows[c]; r++) {
-            if(H->entries[c][r] > 0) {
-                fprintf(out, "%d %d %d\n", c, r, H->entries[c][r]);
+            int ri= r - H->start_rows[c];
+            if(H->entries[c][ri] > 0) {
+                fprintf(out, "%d %d %d\n", c, r, H->entries[c][ri]);
             }
         }
     }

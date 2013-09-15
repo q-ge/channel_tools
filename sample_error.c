@@ -8,6 +8,7 @@
 #include "sparse.h"
 #include "dSFMT-src-2.2.1/dSFMT.h"
 
+#if 0
 int
 sample(dv_t *cp, dsfmt_t *rng) {
     double x= dsfmt_genrand_close_open(rng);
@@ -77,6 +78,7 @@ sampled_matrix(dv_t *cp, int cols, int samples, dsfmt_t *rng) {
     bsc_hist_destroy(H);
     return M;
 }
+#endif
 
 int
 main(int argc, char *argv[]) {
@@ -87,10 +89,14 @@ main(int argc, char *argv[]) {
     dsfmt_t rng;
     int samples;
     struct timespec start, end;
+    int ncol, firstrow, lastrow, nrow;
+    int *counts;
+    int count_total;
+    int c;
 
     if(argc < 3) {
         fprintf(stderr,
-                "Usage: %s <channel matrix> <samples per column>\n", argv[0]);
+                "Usage: %s <channel hist> <samples per column>\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
@@ -99,49 +105,45 @@ main(int argc, char *argv[]) {
 
     samples= atoi(argv[2]);
 
-    M= csc_load_binary(in, &e);
-    if(!M) { csc_perror(e, "csc_load_binary"); exit(EXIT_FAILURE); }
-    fclose(in);
+    if(fscanf(in, "%d %d %d\n", &ncol, &firstrow, &lastrow) != 3) {
+        fprintf(stderr, "Malformed histogram\n");
+        exit(EXIT_FAILURE);
+    }
 
-    if(!csc_check(M, 1)) abort();
-    csc_prune_cols(M);
-    csc_stats(M);
+    if(ncol < 1 || firstrow < 0 || lastrow < 0 || lastrow < firstrow) {
+        fprintf(stderr, "Malformed histogram\n");
+        exit(EXIT_FAILURE);
+    }
 
-    if(STRIDE_OF(M) > 1) {
-        fprintf(stderr, "Can't handle a strided matrix\n");
+    nrow= lastrow - firstrow + 1;
+
+    counts= calloc(nrow, sizeof(int));
+    if(!counts) {
+        perror("malloc");
         exit(EXIT_FAILURE);
     }
 
     printf("Averaging matrix columns\n");
 
-    cum_prob= dv_new(M->nrow);
-    if(!cum_prob) {
-        perror("dv_new");
-        exit(EXIT_FAILURE);
-    }
-    dv_zero(cum_prob);
-
     {
-        int64_t i;
-        float Pc, Ps;
-
-        /* Tally all matrix elements by row. */
-        for(i= 0; i < M->nnz; i++)
-            cum_prob->entries[M->rows[i]]+= M->entries[i];
-
-        /* Scale the rows down, and find cumulative prob. */
-        Pc= 0.0;
-        for(i= 0; i < cum_prob->length; i++) {
-            Pc+= cum_prob->entries[i] / M->nrow;
-            cum_prob->entries[i]= Pc;
+        int clabel, r, count;
+        count_total= 0;
+        while(fscanf(in, "%d %d %d\n", &clabel, &r, &count) == 3) {
+            if(r < firstrow || r > lastrow || c < 0) {
+                fprintf(stderr, "Malformed histogram\n");
+                exit(EXIT_FAILURE);
+            }
+            counts[r - firstrow]+= count;
+            count_total+= count;
         }
-
-        for(i= 0; i < cum_prob->length; i++)
-            cum_prob->entries[i]/= Pc;
-
     }
 
-    dsfmt_init_gen_rand(&rng, time(NULL));
+    printf("%ld\n", count_total);
+
+    fclose(in);
+
+#if 0
+    sfmt_init_gen_rand(&rng, time(NULL));
 
     {
         int i;
@@ -159,6 +161,9 @@ main(int argc, char *argv[]) {
 
     dv_destroy(cum_prob);
     csc_mat_destroy(M);
+#endif
+
+    free(counts);
 
     return 0;
 }

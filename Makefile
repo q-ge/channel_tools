@@ -25,10 +25,12 @@ ifdef CAP_BENCH
     CFLAGS+= -DCAP_BENCH
 endif
 
+DEBUG_EXECUTABLES= test_sparse test_hist
+
 EXECUTABLES=speed_sparse channel_matrix analyse capacity analyse_mat \
             mult stride extract_plot sample_error channel_hist
 ifdef DEBUG
-EXECUTABLES+= test_sparse
+EXECUTABLES+= $(DEBUG_EXECUTABLES)
 endif
 
 SPARSE_OBJS= sparse.o
@@ -92,10 +94,13 @@ sample_error: sample_error.o ${SPARSE_OBJS} channel_algorithms.o \
 
 channel_hist: channel_hist.o ${SPARSE_OBJS}
 
+test_hist: test_hist.o ${SPARSE_OBJS}
+
 # Tests
 
 test/matrix1: test/raw_samples1.xz channel_matrix
 	xzcat $< | ./channel_matrix $@
 
 clean:
-	rm -f *.o ${dSFMT_SRC}/*.o ${EXECUTABLES} ${TESTS} cpu.mk
+	rm -f *.o ${dSFMT_SRC}/*.o ${EXECUTABLES} ${DEBUG_EXECUTABLES} \
+              ${TESTS} cpu.mk
