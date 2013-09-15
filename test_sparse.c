@@ -121,6 +121,45 @@ check_row_prob(csc_mat_t *M) {
     }
 }
 
+#define RIGGED_COLS 1000
+
+void
+rigged_create_test(void) {
+    bsc_hist_t *H;
+    int c, r;
+
+    printf("Generating a histogram with known counts...");
+
+    H= bsc_hist_new();
+
+    for(c= 0; c < RIGGED_COLS; c++) {
+        int i;
+
+        for(i= 0; i < 10; i++) {
+            for(r= RIGGED_COLS - c; r < RIGGED_COLS; r++) {
+                bsc_hist_count(H, c, r, 1);
+            }
+        }
+    }
+
+    assert(H->end_col= RIGGED_COLS);
+    for(c= 0; c < H->end_col; c++) {
+        for(r= H->start_rows[c]; r < H->end_rows[c]; r++) {
+            int ri= r - H->start_rows[c];
+            if(r < RIGGED_COLS - c || r >= RIGGED_COLS) {
+                assert(H->entries[c][ri] == 0);
+            }
+            else {
+                assert(H->entries[c][ri] == 10);
+            }
+        }
+    }
+
+    bsc_hist_destroy(H);
+
+    printf(" done.\n");
+}
+
 void
 random_create_test(void) {
     bsc_hist_t *H;
@@ -361,6 +400,8 @@ main(int argc, char *argv[]) {
     srandom(seed);
 
     leak_test();
+
+    rigged_create_test();
 
     for(i= 0; i < 4; i++) random_create_test();
 
