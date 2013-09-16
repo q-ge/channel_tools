@@ -7,6 +7,7 @@ main(int argc, char *argv[]) {
     int r, c;
     int min, max;
     int rmin, rmax;
+    int cmin, cmax;
     size_t *counts, total_count, out_of_range, malformed;
 
     if(argc < 3) {
@@ -32,17 +33,26 @@ main(int argc, char *argv[]) {
     malformed= 0;
     rmin= INT_MAX;
     rmax= INT_MIN;
+    cmin= INT_MAX;
+    cmax= INT_MIN;
 
     while(!feof(stdin) && !ferror(stdin)) {
         int n;
 
         n= scanf("%d %d\n", &c, &r);
         if(n != 2) {
+            int c;
             malformed++;
+            do {
+                c= fgetc(stdin);
+            } while(c != '\n' && c != EOF);
             continue;
         }
 
         total_count++;
+
+        if(c < cmin) cmin= c;
+        if(cmax < c) cmax= c;
 
         if(c < min || max < c) {
             out_of_range++;
@@ -55,8 +65,8 @@ main(int argc, char *argv[]) {
         if(rmax < r) rmax= r;
     }
 
-    printf("%lu %lu %lu %d %d", total_count, out_of_range, malformed, rmin,
-            rmax);
+    printf("%lu %lu %lu %d %d %d %d", total_count, out_of_range, malformed,
+            rmin, rmax, cmin, cmax);
     for(c= 0; c <= max - min; c++)
         printf(" %lu", counts[c]);
     printf("\n");
