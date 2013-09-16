@@ -14,11 +14,14 @@ main(int argc, char *argv[]) {
     int c, r;
     FILE *out;
     int cmin= INT_MIN, cmax= INT_MAX;
+    int climit= -1;
+    int *counts;
     size_t malformed= 0, out_of_range= 0;
     char buf[MAXLINE];
 
-    if(argc != 2 && argc != 4) {
-        printf("Usage: %s <output_filename> [<col. min> <col. max>]\n",
+    if(argc != 2 && argc != 4 && argc != 5) {
+        printf("Usage: %s <output_filename> [<col. min> <col. max> "
+               "[<count limit>]]\n",
                 argv[0]);
         return 1;
     }
@@ -29,9 +32,18 @@ main(int argc, char *argv[]) {
         return 1;
     }
 
-    if(argc == 4) {
+    if(argc >= 4) {
         cmin= atoi(argv[2]);
         cmax= atoi(argv[3]);
+    }
+
+    if(argc >= 5) {
+        climit= atoi(argv[4]);
+        counts= calloc(cmax - cmin + 1, sizeof(int));
+        if(!counts) {
+            perror("calloc");
+            exit(EXIT_FAILURE);
+        }
     }
 
     printf("Building histogram...");
@@ -50,6 +62,15 @@ main(int argc, char *argv[]) {
         if(c < cmin || cmax < c) {
             out_of_range++;
             continue;
+        }
+
+        if(climit >= 0) {
+            int i= c - cmin;
+
+            if(counts[i] >= climit)
+                continue;
+
+            counts[i]++;
         }
 
         bsc_hist_count(H, c, r, 1);
