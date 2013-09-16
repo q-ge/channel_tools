@@ -124,3 +124,8 @@ for chip in os.listdir(root):
                 print "        %d min col" % cmin
                 print "        %d max col" % cmax
                 print "        %d minimum count" % min(counts)
+
+                hist= file("%s.hist" % name, "w")
+                for i in xrange(len(counts)):
+                    print >>hist, "%d %d\n" % (rge[0] + i, counts[i])
+                del(hist)
