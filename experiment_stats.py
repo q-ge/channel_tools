@@ -20,14 +20,14 @@ if jobs < 1:
     jobs= 1
 
 root= os.path.abspath(sys.argv[1])
-for c in os.listdir(root):
-    if not os.path.isdir(os.path.join(root, c)):
+for chip in os.listdir(root):
+    if not os.path.isdir(os.path.join(root, chip)):
         continue
-    if c == "simulation":
+    if chip == "simulation":
         continue
 
-    print "chip %s" % c
-    chip_root= os.path.join(root, c)
+    print "chip %s" % chip
+    chip_root= os.path.join(root, chip)
 
     channels= os.listdir(chip_root)
     for c in channels:
@@ -90,8 +90,10 @@ for c in os.listdir(root):
                     job_paths[j].append(rp)
                     j= (j + 1) % jobs
 
-                pipes= [Popen("zcat %s | ./summarise %d %d" % \
-                            (" ".join(jp), rge[0], rge[1]),
+                name= "%s.%s.%s.%d" % (chip, c, cm, ts)
+                pipes= [Popen("zcat %s | ./summarise %d %d %s %s" % \
+                            (" ".join(jp), rge[0], rge[1], \
+                             "%s.ool" % name, "%s.mal" % name), \
                             shell=True, stdout=PIPE) for jp in job_paths]
 
                 for p in pipes:

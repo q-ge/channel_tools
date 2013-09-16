@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define MAXLINE 1024
+
 int
 main(int argc, char *argv[]) {
     int r, c;
@@ -9,14 +11,23 @@ main(int argc, char *argv[]) {
     int rmin, rmax;
     int cmin, cmax;
     size_t *counts, total_count, out_of_range, malformed;
+    FILE *oor_log, *mal_log;
+    char buf[MAXLINE];
 
-    if(argc < 3) {
-        fprintf(stderr, "Usage: %s <range min> <range max>\n", argv[0]);
+    if(argc < 5) {
+        fprintf(stderr, "Usage: %s <range min> <range max> <out of range "
+                "logfile> <malformed logfile>\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
     min= atoi(argv[1]);
     max= atoi(argv[2]);
+    oor_log= fopen(argv[3], "w");
+    mal_log= fopen(argv[4], "w");
+    if(!oor_log || !mal_log) {
+        perror("fopen");
+        exit(EXIT_FAILURE);
+    }
 
     if(min < 0 || max < 0 || max < min) {
         fprintf(stderr, "Invalid range: %d - %d\n", min, max);
@@ -36,16 +47,13 @@ main(int argc, char *argv[]) {
     cmin= INT_MAX;
     cmax= INT_MIN;
 
-    while(!feof(stdin) && !ferror(stdin)) {
+    while(fgets(buf, MAXLINE, stdin)) {
         int n;
 
-        n= scanf("%d %d\n", &c, &r);
+        n= sscanf(buf, "%d %d\n", &c, &r);
         if(n != 2) {
-            int c;
             malformed++;
-            do {
-                c= fgetc(stdin);
-            } while(c != '\n' && c != EOF);
+            fprintf(mal_log, "%s\n", buf);
             continue;
         }
 
@@ -56,6 +64,7 @@ main(int argc, char *argv[]) {
 
         if(c < min || max < c) {
             out_of_range++;
+            fprintf(oor_log, "%s", buf);
             continue;
         }
 
@@ -70,6 +79,9 @@ main(int argc, char *argv[]) {
     for(c= 0; c <= max - min; c++)
         printf(" %lu", counts[c]);
     printf("\n");
+
+    fclose(mal_log);
+    fclose(oor_log);
 
     return 0;
 }
