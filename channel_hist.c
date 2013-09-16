@@ -1,10 +1,11 @@
 #include <assert.h>
 #include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "sparse.h"
 
-#define BLOCK_SIZE 16
+#define MAXLINE 1024
 
 int
 main(int argc, char *argv[]) {
@@ -14,9 +15,13 @@ main(int argc, char *argv[]) {
     int ne_cols= 0;
     int min_row= INT_MAX;
     int max_row= 0;
+    int cmin= INT_MIN, cmax= INT_MAX;
+    size_t malformed= 0, out_of_range= 0;
+    char buf[MAXLINE];
 
-    if(argc < 2) {
-        printf("Usage: %s <output_filename>\n", argv[0]);
+    if(argc != 2 && argc != 4) {
+        printf("Usage: %s <output_filename> [<col. min> <col. max>]\n",
+                argv[0]);
         return 1;
     }
 
@@ -26,10 +31,31 @@ main(int argc, char *argv[]) {
         return 1;
     }
 
+    if(argc == 4) {
+        cmin= atoi(argv[2]);
+        cmax= atoi(argv[3]);
+    }
+
     printf("Building histogram...");
     fflush(stdout);
     H= bsc_hist_new();
-    while(scanf("%d %d\n", &r, &c) == 2) bsc_hist_count(H, c, r, 1);
+    while(fgets(buf, MAXLINE, stdin)) {
+        int n;
+
+        n= sscanf(buf, "%d %d\n", &c, &r);
+
+        if(n != 2) {
+            malformed++;
+            continue;
+        }
+
+        if(c < cmin || cmax < c) {
+            out_of_range++;
+            continue;
+        }
+
+        bsc_hist_count(H, c, r, 1);
+    }
     printf(" done.\n");
     bsc_stats(H);
 
@@ -56,6 +82,9 @@ main(int argc, char *argv[]) {
     }
 
     fclose(out);
+
+    fprintf(stderr, "%lu malformed entries, %lu columns out of range\n",
+            malformed, out_of_range);
 
     return 0;
 }
