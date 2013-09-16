@@ -13,3 +13,6 @@ stride
 test/matrix1
 sample_error
 channel_hist
+log
+summarise
+analysis/*
