@@ -1,6 +1,8 @@
 CFLAGS=-Wall# -Werror
 CFLAGS+=-DDSFMT_MEXP=521
 
+CFLAGS+=${EXTRA_CFLAGS}
+
 dSFMT_SRC=dSFMT-src-2.2.1
 
 include cpu.mk

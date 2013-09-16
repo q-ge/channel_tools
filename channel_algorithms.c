@@ -7,7 +7,7 @@
 #include "log.h"
 #include "sparse.h"
 
-#define DEBUG_CAPACITY
+#undef DEBUG_CAPACITY
 
 #ifdef DEBUG_CAPACITY
 #define D(fmt,...) fprintf(stderr,fmt,## __VA_ARGS__)
