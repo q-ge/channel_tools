@@ -90,7 +90,7 @@ extract_plot: extract_plot.o ${SPARSE_OBJS}
 
 stride: stride.o ${SPARSE_OBJS}
 
-sample_error: LDFLAGS+= -lm -lrt
+sample_error: LDFLAGS+= -lm -lrt -lpthread
 sample_error: sample_error.o ${SPARSE_OBJS} channel_algorithms.o \
               log.o fastexp.o ${dSFMT_SRC}/dSFMT.o
 

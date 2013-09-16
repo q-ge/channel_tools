@@ -1,9 +1,11 @@
 #include <assert.h>
 #include <limits.h>
 #include <math.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "sparse.h"
 #include "dSFMT-src-2.2.1/dSFMT.h"
@@ -75,6 +77,8 @@ average_cols(csc_mat_t *M) {
     return v;
 }
 
+pthread_mutex_t output_lock= PTHREAD_MUTEX_INITIALIZER;
+
 void
 noisy_matrices(dv_t *cp, float epsilon, int n, int cols,
         int samples, dsfmt_t *rng) {
@@ -84,8 +88,27 @@ noisy_matrices(dv_t *cp, float epsilon, int n, int cols,
         csc_mat_t *M= sampled_matrix(cp, cols, samples, rng);
         float I= blahut_arimoto_4(M, epsilon);
         csc_mat_destroy(M);
+        pthread_mutex_lock(&output_lock);
         printf("%.12e\n", I);
+        pthread_mutex_unlock(&output_lock);
     }
+}
+
+struct job {
+    dv_t *cp;
+    float epsilon;
+    int n;
+    int cols;
+    int samples;
+    dsfmt_t rng;
+    pthread_t thread;
+};
+
+static void *
+worker(void *arg) {
+    struct job *j= (struct job *)arg;
+    noisy_matrices(j->cp, j->epsilon, j->n, j->cols, j->samples, &j->rng);
+    return (void *)0;
 }
 
 int
@@ -94,9 +117,14 @@ main(int argc, char *argv[]) {
     csc_mat_t *M;
     csc_errno_t e;
     dv_t *cum_prob;
-    dsfmt_t rng;
-    int samples, runs;
+    int samples, runs, runs_per_job;
     float epsilon;
+    int nthreads;
+    struct job *jobs;
+    int seed;
+    int i;
+
+    srandom(time(NULL));
 
     if(argc < 5) {
         fprintf(stderr,
@@ -130,11 +158,41 @@ main(int argc, char *argv[]) {
     cum_prob= average_cols(M);
     fprintf(stderr, " done.\n");
 
-    dsfmt_init_gen_rand(&rng, time(NULL));
+    nthreads= sysconf(_SC_NPROCESSORS_ONLN);
+    if(nthreads < 1) nthreads= 1;
+
+    jobs= malloc(nthreads * sizeof(struct job));
+    if(!jobs) {
+        perror("malloc");
+        exit(EXIT_FAILURE);
+    }
 
     fprintf(stderr, "Generating noisy matrices...");
     fflush(stderr);
-    noisy_matrices(cum_prob, epsilon, runs, M->ncol, samples, &rng);
+    runs_per_job= runs / nthreads;
+    for(i= 0; i < nthreads; i++) {
+        jobs[i].cp= cum_prob;
+        jobs[i].epsilon= epsilon;
+        jobs[i].n= runs_per_job;
+        jobs[i].cols= M->ncol;
+        jobs[i].samples= samples;
+        seed= random();
+        dsfmt_init_gen_rand(&jobs[i].rng, seed);
+        runs-= runs_per_job;
+    }
+    jobs[i].n+= runs;
+    for(i= 0; i < nthreads; i++) {
+        if(pthread_create(&jobs[i].thread, NULL, worker, &jobs[i])) {
+            perror("pthread_create");
+            exit(EXIT_FAILURE);
+        }
+    }
+    for(i= 0; i < nthreads; i++) {
+        if(pthread_join(jobs[i].thread, NULL)) {
+            perror("pthread_join");
+            exit(EXIT_FAILURE);
+        }
+    }
     fprintf(stderr, " done.\n");
 
     dv_destroy(cum_prob);

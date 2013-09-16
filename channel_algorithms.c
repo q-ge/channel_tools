@@ -367,7 +367,7 @@ void wait_for(struct thread_data *td, int i) {
         { perror("pthread_cond_wait"); abort(); }
 }
 
-void *
+static void *
 worker(void *_arg) {
     struct thread_data *td= (struct thread_data *)_arg;
 
