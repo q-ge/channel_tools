@@ -91,7 +91,7 @@ for chip in os.listdir(root):
                     j= (j + 1) % jobs
 
                 name= "%s.%s.%s.%d" % (chip, c, cm, ts)
-                pipes= [Popen("zcat %s | ./summarise %d %d %s %s" % \
+                pipes= [Popen("xzcat %s | ./summarise %d %d %s %s" % \
                             (" ".join(jp), rge[0], rge[1], \
                              "%s.ool" % name, "%s.mal" % name), \
                             shell=True, stdout=PIPE) for jp in job_paths]

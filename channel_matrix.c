@@ -16,12 +16,13 @@ main(int argc, char *argv[]) {
     int cmin= INT_MIN, cmax= INT_MAX;
     int climit= -1;
     int *counts;
+    int discard= 0;
     size_t malformed= 0, out_of_range= 0;
     char buf[MAXLINE];
 
-    if(argc != 2 && argc != 4 && argc != 5) {
+    if(argc != 2 && argc != 4 && argc != 5 && argc != 6) {
         printf("Usage: %s <output_filename> [<col. min> <col. max> "
-               "[<count limit>]]\n",
+               "[<count limit> [<discard>]]]\n",
                 argv[0]);
         return 1;
     }
@@ -46,6 +47,10 @@ main(int argc, char *argv[]) {
         }
     }
 
+    if(argc >= 6) {
+        discard= atoi(argv[5]);
+    }
+
     printf("Building histogram...");
     fflush(stdout);
     H= bsc_hist_new();
@@ -67,10 +72,13 @@ main(int argc, char *argv[]) {
         if(climit >= 0) {
             int i= c - cmin;
 
-            if(counts[i] >= climit)
+            if(counts[i] >= climit + discard)
                 continue;
 
             counts[i]++;
+
+            if(counts[i] <= discard)
+                continue;
         }
 
         bsc_hist_count(H, c, r, 1);
