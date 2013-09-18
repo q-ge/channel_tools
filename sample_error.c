@@ -4,6 +4,7 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -122,6 +123,7 @@ main(int argc, char *argv[]) {
     int nthreads;
     struct job *jobs;
     int seed;
+    int quiet= 0;
     int i;
 
     srandom(time(NULL));
@@ -129,7 +131,7 @@ main(int argc, char *argv[]) {
     if(argc < 5) {
         fprintf(stderr,
                 "Usage: %s <channel matrix> <samples per column> "
-                "<runs> <max error>\n", argv[0]);
+                "<runs> <max error> [-q]\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
@@ -140,28 +142,29 @@ main(int argc, char *argv[]) {
     runs= atoi(argv[3]);
     epsilon= atof(argv[4]);
 
+    if(argc > 5 && !strcmp(argv[5], "-q"))
+        quiet= 1;
+
     M= csc_load_binary(in, &e);
     if(!M) { csc_perror(e, "csc_load_binary"); exit(EXIT_FAILURE); }
     fclose(in);
 
     if(!csc_check(M, 1)) abort();
     csc_prune_cols(M);
-    csc_stats(M);
+    if(!quiet) csc_stats(M);
 
     if(STRIDE_OF(M) > 1) {
         fprintf(stderr, "Can't handle a strided matrix\n");
         exit(EXIT_FAILURE);
     }
 
-    fprintf(stderr, "Averaging matrix columns...");
-    fflush(stderr);
+    if(!quiet) fprintf(stderr, "Averaging matrix columns...");
+    if(!quiet) fflush(stderr);
     cum_prob= average_cols(M);
-    fprintf(stderr, " done.\n");
+    if(!quiet) fprintf(stderr, " done.\n");
 
     nthreads= sysconf(_SC_NPROCESSORS_ONLN);
     if(nthreads < 1) nthreads= 1;
-
-    fprintf(stderr, "%d\n", nthreads);
 
     jobs= malloc(nthreads * sizeof(struct job));
     if(!jobs) {
@@ -169,8 +172,8 @@ main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    fprintf(stderr, "Generating noisy matrices...");
-    fflush(stderr);
+    if(!quiet) fprintf(stderr, "Generating noisy matrices...");
+    if(!quiet) fflush(stderr);
     runs_per_job= runs / nthreads;
     for(i= 0; i < nthreads; i++) {
         jobs[i].cp= cum_prob;
@@ -195,7 +198,7 @@ main(int argc, char *argv[]) {
             exit(EXIT_FAILURE);
         }
     }
-    fprintf(stderr, " done.\n");
+    if(!quiet) fprintf(stderr, " done.\n");
 
     dv_destroy(cum_prob);
     csc_mat_destroy(M);
