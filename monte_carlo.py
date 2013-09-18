@@ -86,16 +86,14 @@ for s in sizes:
     sys.stdout.flush()
     discards= []
     S= 0
-    n= 0
-    while S < limit:
+    for s in sizes:
         discards.append(S)
         S+= s
-        n+= 1
     subsampled_channels= [tempfile.mkstemp() for s in sizes]
     pipes= [subprocess.Popen("%s %s %d %d %d %d < %s > /dev/null" % \
         (channel_matrix, subsampled_channels[i][1], \
          mod_range[0], mod_range[1], s, discards[i], samples_file[1]), \
-        shell=True, stdout=subprocess.PIPE) for i in xrange(n)]
+        shell=True, stdout=subprocess.PIPE) for i in xrange(len(sizes)]
 
     for p in pipes:
         sodata, sedata= p.communicate()
@@ -103,7 +101,7 @@ for s in sizes:
     # Calculate capacities
     pipes= [subprocess.Popen("%s %s %f -q" % \
         (capacity, subsampled_channels[i][1], epsilon), \
-        shell=True, stdout=subprocess.PIPE) for i in xrange(n)]
+        shell=True, stdout=subprocess.PIPE) for i in xrange(len(sizes)]
 
     for p in pipes:
         sodata, sedata= p.communicate()
