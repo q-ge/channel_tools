@@ -86,12 +86,12 @@ main(int argc, char *argv[]) {
     printf(" done.\n");
     bsc_stats(H);
 
-    fprintf(stderr, "Building matrix\n");
+    printf("Building matrix\n");
     M= bsc_normalise(H);
     csc_stats(M);
     bsc_hist_destroy(H);
 
-    fprintf(stderr, "Writing matrix\n");
+    printf("Writing matrix\n");
     e= csc_store_binary(M, out);
     if(e != E_CSC_SUCCESS) {
         csc_perror(e, "csc_write_binary");
@@ -100,7 +100,7 @@ main(int argc, char *argv[]) {
 
     fclose(out);
 
-    fprintf(stderr, "%lu malformed entries, %lu columns out of range\n",
+    printf("%lu malformed entries, %lu columns out of range\n",
             malformed, out_of_range);
 
     return 0;

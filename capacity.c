@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 #include "channel_algorithms.h"
@@ -12,18 +13,22 @@ main(int argc, char *argv[]) {
     csc_errno_t e;
     float c, epsilon;
     FILE *in;
+    int quiet= 0;
 #ifdef CAP_BENCH
     struct timespec start, end;
 #endif
 
     if(argc < 3) {
-        fprintf(stderr, "Usage: %s <channel_matrix> <precision>\n", argv[0]);
+        fprintf(stderr, "Usage: %s <channel_matrix> <precision> [-q]\n",
+                argv[0]);
         return 1;
     }
 
     epsilon= strtof(argv[2], NULL);
 
-    printf("Loading channel matrix...");
+    if(argc > 3 && !strcmp(argv[3], "-q")) quiet= 1;
+
+    if(!quiet) printf("Loading channel matrix...");
     fflush(stdout);
     in= fopen(argv[1], "rb");
     if(!in) { perror("fopen"); return 1; }
@@ -32,14 +37,14 @@ main(int argc, char *argv[]) {
     if(!Q) { csc_perror(e, "csc_load_binary"); return 1; }
 
     fclose(in);
-    printf(" done.\n");
+    if(!quiet) printf(" done.\n");
 
-    printf("Writing log table...");
+    if(!quiet) printf("Writing log table...");
     fflush(stdout);
     write_log_table();
-    printf(" done.\n");
+    if(!quiet) printf(" done.\n");
 
-    printf("Finding capacity with precision %.3f...", epsilon);
+    if(!quiet) printf("Finding capacity with precision %.3f...", epsilon);
     fflush(stdout);
 #ifdef CAP_BENCH
     if(clock_gettime(CLOCK_REALTIME, &start)) {
@@ -52,10 +57,13 @@ main(int argc, char *argv[]) {
         perror("clock_gettime"); abort();
     }
 #endif
-    printf(" done.\n");
+    if(!quiet) printf(" done.\n");
 
-    printf("Channel capacity is %f(+%f,-0) bits per usage.\n", c,
-           epsilon);
+    if(!quiet)
+        printf("Channel capacity is %f(+%f,-0) bits per usage.\n", c,
+               epsilon);
+    else
+        printf("%.12e\n", c);
 
 #ifdef CAP_BENCH
     {
