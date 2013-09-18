@@ -161,6 +161,8 @@ main(int argc, char *argv[]) {
     nthreads= sysconf(_SC_NPROCESSORS_ONLN);
     if(nthreads < 1) nthreads= 1;
 
+    fprintf(stderr, "%d\n", nthreads);
+
     jobs= malloc(nthreads * sizeof(struct job));
     if(!jobs) {
         perror("malloc");
@@ -180,7 +182,7 @@ main(int argc, char *argv[]) {
         dsfmt_init_gen_rand(&jobs[i].rng, seed);
         runs-= runs_per_job;
     }
-    jobs[i].n+= runs;
+    jobs[nthreads-1].n+= runs;
     for(i= 0; i < nthreads; i++) {
         if(pthread_create(&jobs[i].thread, NULL, worker, &jobs[i])) {
             perror("pthread_create");
