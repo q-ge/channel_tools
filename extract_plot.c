@@ -13,12 +13,14 @@ main(int argc, char *argv[]) {
     csc_mat_t *M;
     csc_errno_t e;
     int nrow, ncol, rowskip, colbin;
+    int maxrow;
     int r, c;
     float *bins;
     int mask= 0;
 
     if(argc < 4) {
-        fprintf(stderr, "Usage: %s <matrix_filename> <nrow> <ncol>\n",
+        fprintf(stderr, "Usage: %s <matrix_filename> <nrow> <ncol> "
+                " [<max row>]\n",
                 argv[0]);
         exit(EXIT_FAILURE);
     }
@@ -38,7 +40,9 @@ main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    if(argc >= 5 && !strncmp(argv[4], "-m", 2)) mask= 1;
+    if(argc >= 5) maxrow= atoi(argv[4]);
+    else maxrow= INT_MAX;
+    //if(argc >= 5 && !strncmp(argv[4], "-m", 2)) mask= 1;
 
     M= csc_load_binary(in, &e);
     if(!M) { csc_perror(e, "csc_load_binary"); exit(EXIT_FAILURE); }
@@ -63,8 +67,10 @@ main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    rowskip= M->nrow / nrow;
-    if(M->nrow % nrow != 0) rowskip++;
+    if(maxrow > M->nrow) maxrow= M->nrow;
+
+    rowskip= maxrow / nrow;
+    if(maxrow % nrow != 0) rowskip++;
     colbin=  M->ncol / ncol;
     if(M->ncol % ncol != 0) colbin++;
     printf("# %d rows %d cols\n", nrow, ncol);
@@ -74,19 +80,20 @@ main(int argc, char *argv[]) {
 
     for(c= 0; c < M->ncol; c+=colbin) {
         int d;
+        float col_bin_prob= 0.0;
 
-        memset(bins, 0, nrow * sizeof(float));
+        bzero(bins, nrow * sizeof(float));
 
         for(d= 0; d < colbin && c + d < M->ncol; d++) {
             int i;
 
             for(i= M->ci[c+d]; i < M->ci[c+d+1]; i++) {
                 r= M->rows[i];
-                if(r % rowskip == 0) {
-                    assert(0 <= r / rowskip &&
-                           r / rowskip < nrow);
-                    bins[r / rowskip]+= M->entries[i];
-                }
+                if(r > maxrow) continue;
+                assert(0 <= r / rowskip &&
+                       r / rowskip < nrow);
+                bins[r / rowskip]+= M->entries[i];
+                col_bin_prob+= M->entries[i];
             }
         }
 
@@ -98,7 +105,8 @@ main(int argc, char *argv[]) {
                     printf("%d %d %f\n", c + colbin/2, r * rowskip, 0.0);
             }
             else
-                printf("%d %d %f\n", c + colbin/2, r * rowskip, bins[r]);
+                printf("%d %d %f\n", c + colbin/2, r * rowskip,
+                        bins[r] / col_bin_prob);
         }
     }
 
