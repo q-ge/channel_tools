@@ -7,9 +7,16 @@ import re
 from subprocess import Popen, PIPE
 import sys
 
+rootdir= os.path.dirname(sys.argv[0])
+
+machine= False
+
 if len(sys.argv) < 2:
-    print >>sys.stderr, "Usage: %s <data root>\n" % sys.argv[0]
+    print >>sys.stderr, "Usage: %s <data root> [-m]\n" % sys.argv[0]
     sys.exit()
+
+if len(sys.argv) > 2 and sys.argv[2] == '-m':
+    machine= True
 
 jobs= 0
 cpuinfo= file("/proc/cpuinfo", "r")
@@ -23,10 +30,12 @@ root= os.path.abspath(sys.argv[1])
 for chip in os.listdir(root):
     if not os.path.isdir(os.path.join(root, chip)):
         continue
-    if chip == "simulation":
+    if chip == "simulation" or chip == "analysis" or \
+       chip == "quarantine":
         continue
 
-    print "chip %s" % chip
+    if not machine:
+        print "chip %s" % chip
     chip_root= os.path.join(root, chip)
 
     channels= os.listdir(chip_root)
@@ -46,23 +55,37 @@ for chip in os.listdir(root):
         del info
         rge= (int(rge_str[0]), int(rge_str[1]))
 
-        print "  channel %s" % c
-        print "  range %d - %d" % rge
+        if not machine:
+            print "  channel %s" % c
+            print "  range %d - %d" % rge
 
         countermeasures= os.listdir(cd)
         for cm in countermeasures:
             cmd= os.path.join(cd, cm)
             if not os.path.isdir(cmd):
                 continue
-            print "    countermeasure %s" % cm
+            if not machine:
+                print "    countermeasure %s" % cm
+
+            rge_str= None
+            limits= file(os.path.join(cmd, "limits"), "r")
+            for l in limits:
+                m= re.match("^result range:\s*(\d+)\s*-\s*(\d+)", l)
+                if m:
+                    rge_str= m.group(1, 2)
+            del limits
+            res_rge= (int(rge_str[0]), int(rge_str[1]))
 
             timeslices= os.listdir(cmd)
 
             for ts_string in timeslices:
+                if ts_string == "limits": continue
+
                 tsd= os.path.join(cmd, ts_string)
                 m= re.match("TS_(.*)", ts_string)
                 ts= int(m.group(1))
-                print "      timeslice %d" % ts
+                if not machine:
+                    print "      timeslice %d" % ts
 
                 runs= 0
                 out_of_range= 0
@@ -91,8 +114,8 @@ for chip in os.listdir(root):
                     j= (j + 1) % jobs
 
                 name= "%s.%s.%s.%d" % (chip, c, cm, ts)
-                pipes= [Popen("xzcat %s | ./summarise %d %d %s %s" % \
-                            (" ".join(jp), rge[0], rge[1], \
+                pipes= [Popen("xzcat %s | %s/summarise %d %d %s %s" % \
+                            (" ".join(jp), rootdir, rge[0], rge[1], \
                              "%s.ool" % name, "%s.mal" % name), \
                             shell=True, stdout=PIPE) for jp in job_paths]
 
@@ -115,15 +138,23 @@ for chip in os.listdir(root):
                         cmax= output[6]
                     counts+= array(output[7:])
 
-                print "        %d runs" % runs
-                print "        %d counts" % total_count
-                print "        %d out of range" % out_of_range
-                print "        %d malformed" % malformed
-                print "        %d min row" % rmin
-                print "        %d max row" % rmax
-                print "        %d min col" % cmin
-                print "        %d max col" % cmax
-                print "        %d minimum count" % min(counts)
+                if machine:
+                    print "%s %s %s %d %d %d %d %d %d %d" \
+                          " %d %d %d %d %d %d %d" % \
+                        (chip, c, cm, ts, rge[0], rge[1], \
+                         res_rge[0], res_rge[1], runs, total_count, \
+                         out_of_range, malformed, rmin, rmax, \
+                         cmin, cmax, min(counts))
+                else:
+                    print "        %d runs" % runs
+                    print "        %d counts" % total_count
+                    print "        %d out of range" % out_of_range
+                    print "        %d malformed" % malformed
+                    print "        %d min row" % rmin
+                    print "        %d max row" % rmax
+                    print "        %d min col" % cmin
+                    print "        %d max col" % cmax
+                    print "        %d minimum count" % min(counts)
 
                 hist= file("%s.hist" % name, "w")
                 for i in xrange(len(counts)):
