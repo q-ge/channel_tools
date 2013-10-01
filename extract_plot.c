@@ -87,7 +87,7 @@ main(int argc, char *argv[]) {
 
     for(r= 0; r < rcount; r++) {
         int index= (r * nrow) / rcount;
-        row_bin_numbers[index]= r;
+        row_bin_numbers[index]= rmin + r;
     }
 
     for(c= 0; c < M->ncol; c+=colbin) {
