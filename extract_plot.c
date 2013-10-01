@@ -12,15 +12,14 @@ main(int argc, char *argv[]) {
     FILE *in;
     csc_mat_t *M;
     csc_errno_t e;
-    int nrow, ncol, rowskip, colbin;
-    int maxrow;
+    int nrow, ncol, colbin;
+    int rmin, rmax, rcount;
     int r, c;
     float *bins;
-    int mask= 0;
+    int *row_bin_numbers;
 
     if(argc < 4) {
-        fprintf(stderr, "Usage: %s <matrix_filename> <nrow> <ncol> "
-                " [<max row>]\n",
+        fprintf(stderr, "Usage: %s <matrix_filename> <nrow> <ncol>\n",
                 argv[0]);
         exit(EXIT_FAILURE);
     }
@@ -39,10 +38,6 @@ main(int argc, char *argv[]) {
         fprintf(stderr, "ncol <= 0\n");
         exit(EXIT_FAILURE);
     }
-
-    if(argc >= 5) maxrow= atoi(argv[4]);
-    else maxrow= INT_MAX;
-    //if(argc >= 5 && !strncmp(argv[4], "-m", 2)) mask= 1;
 
     M= csc_load_binary(in, &e);
     if(!M) { csc_perror(e, "csc_load_binary"); exit(EXIT_FAILURE); }
@@ -67,20 +62,33 @@ main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    if(maxrow > M->nrow) maxrow= M->nrow;
+    rmax= 0;
+    rmin= INT_MAX;
 
-    rowskip= maxrow / nrow;
-    if(maxrow % nrow != 0) rowskip++;
-    if(M->ncol < 2 * ncol)
-        colbin= 1;
-    else {
-        colbin=  M->ncol / ncol;
-        if(M->ncol % ncol != 0) colbin++;
+    for(c= 0; c < M->ncol; c++) {
+        int is= M->ci[c], ie= M->ci[c+1];
+
+        if(is < ie) {
+            if(M->rows[is] < rmin) rmin= M->rows[is];
+            if(M->rows[ie-1] > rmax) rmax= M->rows[ie-1];
+        }
     }
+    rcount= rmax - rmin + 1;
+
+    if(rcount < nrow) nrow= rcount;
+
     printf("# %d rows %d cols\n", nrow, ncol);
 
+    colbin= M->ncol / ncol;
+
     bins= malloc(nrow * sizeof(float));
-    if(!bins) { perror("malloc"); exit(EXIT_FAILURE); }
+    row_bin_numbers= malloc(nrow * sizeof(int));
+    if(!bins || !row_bin_numbers) { perror("malloc"); exit(EXIT_FAILURE); }
+
+    for(r= 0; r < rcount; r++) {
+        int index= (r * nrow) / rcount;
+        row_bin_numbers[index]= r;
+    }
 
     for(c= 0; c < M->ncol; c+=colbin) {
         int d;
@@ -92,25 +100,17 @@ main(int argc, char *argv[]) {
             int i;
 
             for(i= M->ci[c+d]; i < M->ci[c+d+1]; i++) {
+                int index;
                 r= M->rows[i];
-                if(r > maxrow) continue;
-                assert(0 <= r / rowskip &&
-                       r / rowskip < nrow);
-                bins[r / rowskip]+= M->entries[i];
+                index= ((r-rmin) * nrow) / rcount;
+                bins[index]+= M->entries[i];
                 col_bin_prob+= M->entries[i];
             }
         }
 
         for(r= 0; r < nrow; r++) {
-            if(mask) {
-                if(bins[r] != 0)
-                    printf("%d %d %f\n", c + colbin/2, r * rowskip, 1.0);
-                else
-                    printf("%d %d %f\n", c + colbin/2, r * rowskip, 0.0);
-            }
-            else
-                printf("%d %d %f\n", c + colbin/2, r * rowskip,
-                        bins[r] / col_bin_prob);
+            printf("%d %d %f\n", c + colbin/2, row_bin_numbers[r],
+                    bins[r] / col_bin_prob);
         }
     }
 
