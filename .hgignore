@@ -16,3 +16,4 @@ channel_hist
 log
 summarise
 analysis/*
+filter_samples

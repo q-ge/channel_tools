@@ -71,8 +71,12 @@ main(int argc, char *argv[]) {
 
     rowskip= maxrow / nrow;
     if(maxrow % nrow != 0) rowskip++;
-    colbin=  M->ncol / ncol;
-    if(M->ncol % ncol != 0) colbin++;
+    if(M->ncol < 2 * ncol)
+        colbin= 1;
+    else {
+        colbin=  M->ncol / ncol;
+        if(M->ncol % ncol != 0) colbin++;
+    }
     printf("# %d rows %d cols\n", nrow, ncol);
 
     bins= malloc(nrow * sizeof(float));
