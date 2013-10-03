@@ -212,9 +212,6 @@ bsc_normalise(bsc_hist_t *H) {
                 M->rows[i]= r;
                 /* Scale and store count. */
                 M->entries[i]= (float)n / H->row_total[r];
-
-                printf("%d %d %d %d %f\n", c, r, n, H->row_total[r],
-                        M->entries[i]);
                 /* Increment in destination array. */
                 i++;
             }
