@@ -255,8 +255,11 @@ bsc_check(bsc_hist_t *H, int verbose) {
         if(H->start_rows[c] < 0)
             FAIL("start_rows[%d] (%d) is negative\n", c, H->start_rows[c]);
     }
-    row_total= alloca(H->end_row * sizeof(int));
-    bzero(row_total, H->end_row * sizeof(int));
+    row_total= calloc(H->end_row, sizeof(int));
+    if(!row_total) {
+        perror("calloc");
+        abort();
+    }
     nnz= 0; total= 0;
     for(c= 0; c < H->end_col; c++) {
         for(r= H->start_rows[c]; r < H->end_rows[c]; r++) {

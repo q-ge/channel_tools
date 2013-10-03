@@ -99,7 +99,8 @@ main(int argc, char *argv[]) {
 
     /* Check the row totals. */
     {
-        float *row_tot= alloca(M->nrow * sizeof(float));
+        float *row_tot= malloc(M->nrow * sizeof(float));
+        if(!row_tot) { perror("malloc"); abort(); }
         bzero(row_tot, M->nrow * sizeof(float));
 
         for(c= 0; c < M->ncol; c++) {
@@ -116,6 +117,7 @@ main(int argc, char *argv[]) {
                 abort();
             }
         }
+        free(row_tot);
     }
 
     printf("Writing matrix\n");
