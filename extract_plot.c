@@ -12,11 +12,10 @@ main(int argc, char *argv[]) {
     FILE *in;
     csc_mat_t *M;
     csc_errno_t e;
-    int nrow, ncol, colbin;
-    int rmin, rmax, rcount;
-    int r, c;
+    int nrow, ncol, rowbin, colskip;
+    int cmin, cmax, ccount;
+    int c;
     float *bins;
-    int *row_bin_numbers;
 
     if(argc < 4) {
         fprintf(stderr, "Usage: %s <matrix_filename> <nrow> <ncol>\n",
@@ -62,54 +61,48 @@ main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    rmax= 0;
-    rmin= INT_MAX;
+    cmax= 0;
+    cmin= INT_MAX;
 
     for(c= 0; c < M->ncol; c++) {
         int is= M->ci[c], ie= M->ci[c+1];
 
         if(is < ie) {
-            if(M->rows[is] < rmin) rmin= M->rows[is];
-            if(M->rows[ie-1] > rmax) rmax= M->rows[ie-1];
+            if(c < cmin) cmin= c;
+            if(c > cmax) cmax= c;
         }
     }
-    rcount= rmax - rmin + 1;
+    ccount= cmax - cmin + 1;
 
-    if(rcount < nrow) nrow= rcount;
+    if(ccount < ncol) ncol= ccount;
 
     printf("# %d rows %d cols\n", nrow, ncol);
 
-    colbin= M->ncol / ncol;
+    rowbin= M->nrow / nrow;
 
-    bins= malloc(nrow * sizeof(float));
-    row_bin_numbers= malloc(nrow * sizeof(int));
-    if(!bins || !row_bin_numbers) { perror("malloc"); exit(EXIT_FAILURE); }
+    colskip= M->ncol / ncol;
 
-    for(r= 0; r < rcount; r++) {
-        int index= (r * nrow) / rcount;
-        row_bin_numbers[index]= rmin + r;
+    bins= calloc(nrow, sizeof(float));
+    if(!bins) {
+        perror("calloc");
+        exit(EXIT_FAILURE);
     }
 
-    for(c= 0; c < M->ncol; c+=colbin) {
-        int d;
-        float col_bin_prob= 0.0;
+    for(c= 0; c < M->ncol; c+=colskip) {
+        int i, b;
 
         bzero(bins, nrow * sizeof(float));
 
-        for(d= 0; d < colbin && c + d < M->ncol; d++) {
-            int i;
-
-            for(i= M->ci[c+d]; i < M->ci[c+d+1]; i++) {
-                int index;
-                r= M->rows[i];
-                index= ((r-rmin) * nrow) / rcount;
-                bins[index]+= M->entries[i];
-                col_bin_prob+= M->entries[i];
-            }
+        for(i= M->ci[c]; i < M->ci[c+1]; i++) {
+            int r= M->rows[i];
+            b= (r * nrow) / M->nrow;
+            bins[b]+= M->entries[i];
         }
 
-        for(r= 0; r < nrow; r++) {
-            printf("%d %d %f\n", row_bin_numbers[r], c + colbin/2, bins[r]);
+        for(b= 0; b < nrow; b++) {
+            printf("%f %d %.12e\n",
+                ((float)(b * rowbin) + ((b+1) * rowbin - 1))/2,
+                c, bins[b] / rowbin);
         }
     }
 
