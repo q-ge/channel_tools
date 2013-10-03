@@ -31,8 +31,6 @@ for l in stats:
              '%s %s %s %s %s > /dev/null 2>&1' % \
                (channel_matrix, output, cmin, cmax, min_count)
 
-    print cmdline
-
     p= Popen(cmdline, shell=True, stdout=PIPE)
     pipes.append(p)
 
