@@ -109,8 +109,7 @@ main(int argc, char *argv[]) {
         }
 
         for(r= 0; r < nrow; r++) {
-            printf("%d %d %f\n", c + colbin/2, row_bin_numbers[r],
-                    bins[r] / col_bin_prob);
+            printf("%d %d %f\n", row_bin_numbers[r], c + colbin/2, bins[r]);
         }
     }
 

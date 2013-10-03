@@ -11,7 +11,7 @@ int
 main(int argc, char *argv[]) {
     csc_mat_t *Q;
     csc_errno_t e;
-    float c, epsilon;
+    float c, epsilon, e_obs;
     FILE *in;
     int quiet= 0;
 #ifdef CAP_BENCH
@@ -44,14 +44,14 @@ main(int argc, char *argv[]) {
     write_log_table();
     if(!quiet) printf(" done.\n");
 
-    if(!quiet) printf("Finding capacity with precision %.3f...", epsilon);
+    if(!quiet) printf("Finding capacity with target precision %.3e...", epsilon);
     fflush(stdout);
 #ifdef CAP_BENCH
     if(clock_gettime(CLOCK_REALTIME, &start)) {
         perror("clock_gettime"); abort();
     }
 #endif
-    c= blahut_arimoto_4(Q, epsilon);
+    c= blahut_arimoto(Q, epsilon, &e_obs);
 #ifdef CAP_BENCH
     if(clock_gettime(CLOCK_REALTIME, &end)) {
         perror("clock_gettime"); abort();
@@ -60,10 +60,9 @@ main(int argc, char *argv[]) {
     if(!quiet) printf(" done.\n");
 
     if(!quiet)
-        printf("Channel capacity is %f(+%f,-0) bits per usage.\n", c,
-               epsilon);
+        printf("Channel capacity is %e(+%e,-0) bits per usage.\n", c, e_obs);
     else
-        printf("%.12e\n", c);
+        printf("%.12e %.12e\n", c, e_obs);
 
 #ifdef CAP_BENCH
     {

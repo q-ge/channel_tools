@@ -87,10 +87,11 @@ noisy_matrices(dv_t *cp, float epsilon, int n, int cols,
 
     for(i= 0; i < n; i++) {
         csc_mat_t *M= sampled_matrix(cp, cols, samples, rng);
-        float I= blahut_arimoto_4(M, epsilon);
+        float I, e;
+        I= blahut_arimoto(M, epsilon, &e);
         csc_mat_destroy(M);
         pthread_mutex_lock(&output_lock);
-        printf("%.12e\n", I);
+        printf("%.12e %.12e\n", I, e);
         pthread_mutex_unlock(&output_lock);
     }
 }

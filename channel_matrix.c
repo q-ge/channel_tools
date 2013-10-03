@@ -1,6 +1,8 @@
 #include <limits.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "sparse.h"
 
@@ -57,7 +59,7 @@ main(int argc, char *argv[]) {
     while(fgets(buf, MAXLINE, stdin)) {
         int n;
 
-        n= sscanf(buf, "%d %d\n", &c, &r);
+        n= sscanf(buf, "%d %d\n", &r, &c);
 
         if(n != 2) {
             malformed++;
@@ -86,10 +88,35 @@ main(int argc, char *argv[]) {
     printf(" done.\n");
     bsc_stats(H);
 
+    if(!bsc_check(H, 1)) abort();
+
     printf("Building matrix\n");
     M= bsc_normalise(H);
     csc_stats(M);
     bsc_hist_destroy(H);
+
+    if(!csc_check(M, 1)) abort();
+
+    /* Check the row totals. */
+    {
+        float *row_tot= alloca(M->nrow * sizeof(float));
+        bzero(row_tot, M->nrow * sizeof(float));
+
+        for(c= 0; c < M->ncol; c++) {
+            int i;
+
+            for(i= M->ci[c]; i < M->ci[c+1]; i++) {
+                row_tot[M->rows[i]]+= M->entries[i];
+            }
+        }
+
+        for(r= 0; r < M->nrow; r++) {
+            if(fabs(row_tot[r] - 1.0) > 1e-5) {
+                fprintf(stderr, "Row %d sums to %.12e\n", r, row_tot[r]);
+                abort();
+            }
+        }
+    }
 
     printf("Writing matrix\n");
     e= csc_store_binary(M, out);

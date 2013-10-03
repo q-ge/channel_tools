@@ -9,6 +9,8 @@
 
 #include "sparse.h"
 
+#undef DEBUG_SPARSE
+
 #ifdef DEBUG_SPARSE
     #define D(f,...) printf("%s: " f, __func__, __VA_ARGS__)
 #else
@@ -95,7 +97,8 @@ bsc_extend_col(bsc_hist_t *H, int c, int r) {
     if(r >= H->end_row) {
         H->row_total= (int *)realloc(H->row_total, (r+1) * sizeof(int));
         if(!H->row_total) { perror("realloc"); abort(); }
-        memset(H->row_total + H->end_row, 0, (r+1 - H->end_row) * sizeof(int));
+        memset(H->row_total + H->end_row, 0,
+                (r+1 - H->end_row) * sizeof(int));
 
         H->end_row= r + 1;
     }
@@ -203,14 +206,19 @@ bsc_normalise(bsc_hist_t *H) {
             n= H->entries[c][r - H->start_rows[c]];
             if(n > 0) { /* Drop zeros */
                 assert(i < M->nnz);
+                assert(0 < H->row_total[r]);
 
                 /* Record row number. */
                 M->rows[i]= r;
                 /* Scale and store count. */
                 M->entries[i]= (float)n / H->row_total[r];
+
+                printf("%d %d %d %d %f\n", c, r, n, H->row_total[r],
+                        M->entries[i]);
                 /* Increment in destination array. */
                 i++;
             }
+            else M->entries[i]= 0.0;
         }
     }
     M->ci[c]= i;
@@ -230,6 +238,55 @@ bsc_size(bsc_hist_t *H) {
 #define FAIL(s,...) { if(verbose) { fprintf(stderr, s, ##__VA_ARGS__); } \
                       return 0; }
 #define SUCCEED() { return 1; }
+
+int
+bsc_check(bsc_hist_t *H, int verbose) {
+    int r, c;
+    int64_t nnz;
+    int total;
+    int *row_total;
+
+    if(!H) FAIL("H is null\n");
+    if(H->nalloc < 0) FAIL("nalloc (%ld) is negative\n", H->nalloc);
+    if(H->nnz < 0) FAIL("nnz (%ld) is negative\n", H->nnz);
+    if(H->nnz > H->nalloc) FAIL("nnz (%ld) > nalloc (%ld)\n",
+            H->nnz, H->nalloc);
+    if(H->end_col < 0) FAIL("end_col (%d) is negative\n", H->end_col);
+    if(H->end_row < 0) FAIL("end_row (%d) is negative\n", H->end_row);
+    if(!H->start_rows) FAIL("start_rows is NULL\n");
+    for(c= 0; c < H->end_col; c++) {
+        if(H->start_rows[c] < 0)
+            FAIL("start_rows[%d] (%d) is negative\n", c, H->start_rows[c]);
+    }
+    row_total= alloca(H->end_row * sizeof(int));
+    bzero(row_total, H->end_row * sizeof(int));
+    nnz= 0; total= 0;
+    for(c= 0; c < H->end_col; c++) {
+        for(r= H->start_rows[c]; r < H->end_rows[c]; r++) {
+            int e= H->entries[c][r - H->start_rows[c]];
+            if(e < 0)
+                FAIL("entries[%d][%d] (%d) < 0", c, r - H->start_rows[c], e);
+            if(e > 0) {
+                if(r > H->end_row)
+                    FAIL("%d,%d (%d) > end_row (%d)\n", c, r, e, H->end_row);
+                nnz++;
+                total+= e;
+                row_total[r]+= e;
+            }
+        }
+    }
+    if(H->nnz != nnz) FAIL("nnz (%ld) != calculated nnz (%ld)\n",
+            H->nnz, nnz);
+    if(H->total != total) FAIL("total (%d) != calculated total (%d)\n",
+            H->total, total);
+    for(r= 0; r < H->end_row; r++) {
+        if(H->row_total[r] != row_total[r])
+            FAIL("row_total[%d] (%d) != calculated row_total[%d] (%d)\n",
+                    r, H->row_total[r], r, row_total[r]);
+    }
+
+    SUCCEED();
+}
 
 int
 csc_check(csc_mat_t *M, int verbose) {

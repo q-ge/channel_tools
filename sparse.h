@@ -92,6 +92,7 @@ void bsc_hist_count(bsc_hist_t *M, int c, int r, int n);
 csc_mat_t *bsc_normalise(bsc_hist_t *H);
 uint64_t bsc_size(bsc_hist_t *H);
 void bsc_stats(bsc_hist_t *H);
+int bsc_check(bsc_hist_t *H, int verbose);
 
 uint64_t csc_size(csc_mat_t *M);
 void csc_mat_destroy(csc_mat_t *M);
