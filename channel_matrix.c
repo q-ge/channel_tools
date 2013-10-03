@@ -112,7 +112,7 @@ main(int argc, char *argv[]) {
         }
 
         for(r= 0; r < M->nrow; r++) {
-            if(fabs(row_tot[r] - 1.0) > 1e-5) {
+            if(fabs(row_tot[r] - 1.0) > 1e-5 && row_tot[r] != 0.0) {
                 fprintf(stderr, "Row %d sums to %.12e\n", r, row_tot[r]);
                 abort();
             }
