@@ -8,22 +8,26 @@ int
 main(int argc, char *argv[]) {
     int r, c;
     int min, max;
+    int res_min, res_max;
     int rmin, rmax;
     int cmin, cmax;
     size_t *counts, total_count, out_of_range, malformed;
     FILE *oor_log, *mal_log;
     char buf[MAXLINE];
 
-    if(argc < 5) {
-        fprintf(stderr, "Usage: %s <range min> <range max> <out of range "
+    if(argc < 7) {
+        fprintf(stderr, "Usage: %s <input min> <input max> "
+                "<output min> <output max> <out of range "
                 "logfile> <malformed logfile>\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
     min= atoi(argv[1]);
     max= atoi(argv[2]);
-    oor_log= fopen(argv[3], "w");
-    mal_log= fopen(argv[4], "w");
+    res_min= atoi(argv[3]);
+    res_max= atoi(argv[4]);
+    oor_log= fopen(argv[5], "w");
+    mal_log= fopen(argv[6], "w");
     if(!oor_log || !mal_log) {
         perror("fopen");
         exit(EXIT_FAILURE);
@@ -68,10 +72,16 @@ main(int argc, char *argv[]) {
             continue;
         }
 
-        counts[c - min]++;
-
         if(r < rmin) rmin= r;
         if(rmax < r) rmax= r;
+
+        if(r < res_min || res_max < r) {
+            out_of_range++;
+            fprintf(oor_log, "%s", buf);
+            continue;
+        }
+
+        counts[c - min]++;
     }
 
     printf("%lu %lu %lu %d %d %d %d", total_count, out_of_range, malformed,

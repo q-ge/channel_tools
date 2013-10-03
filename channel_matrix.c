@@ -15,7 +15,7 @@ main(int argc, char *argv[]) {
     csc_errno_t e;
     int c, r;
     FILE *out;
-    int cmin= INT_MIN, cmax= INT_MAX;
+    int rmin= INT_MIN, rmax= INT_MAX;
     int climit= -1;
     int *counts;
     int discard= 0;
@@ -23,7 +23,7 @@ main(int argc, char *argv[]) {
     char buf[MAXLINE];
 
     if(argc != 2 && argc != 4 && argc != 5 && argc != 6) {
-        printf("Usage: %s <output_filename> [<col. min> <col. max> "
+        printf("Usage: %s <output_filename> [<row. min> <row. max> "
                "[<count limit> [<discard>]]]\n",
                 argv[0]);
         return 1;
@@ -36,13 +36,13 @@ main(int argc, char *argv[]) {
     }
 
     if(argc >= 4) {
-        cmin= atoi(argv[2]);
-        cmax= atoi(argv[3]);
+        rmin= atoi(argv[2]);
+        rmax= atoi(argv[3]);
     }
 
     if(argc >= 5) {
         climit= atoi(argv[4]);
-        counts= calloc(cmax - cmin + 1, sizeof(int));
+        counts= calloc(rmax - rmin + 1, sizeof(int));
         if(!counts) {
             perror("calloc");
             exit(EXIT_FAILURE);
@@ -66,13 +66,13 @@ main(int argc, char *argv[]) {
             continue;
         }
 
-        if(c < cmin || cmax < c) {
+        if(r < rmin || rmax < r) {
             out_of_range++;
             continue;
         }
 
         if(climit >= 0) {
-            int i= c - cmin;
+            int i= r - rmin;
 
             if(counts[i] >= climit + discard)
                 continue;
@@ -112,7 +112,7 @@ main(int argc, char *argv[]) {
         }
 
         for(r= 0; r < M->nrow; r++) {
-            if(fabs(row_tot[r] - 1.0) > 1e-5 && row_tot[r] != 0.0) {
+            if(fabs(row_tot[r] - 1.0) > 1e-3 && row_tot[r] != 0.0) {
                 fprintf(stderr, "Row %d sums to %.12e\n", r, row_tot[r]);
                 abort();
             }

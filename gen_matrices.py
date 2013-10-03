@@ -23,14 +23,17 @@ for l in stats:
 
     print "Generating %s\n" % output
 
-    p= Popen('find %s/%s/%s/%s/TS_%s -name "*.xz" | ' % \
+    cmdline= 'find %s/%s/%s/%s/TS_%s -name "*.xz" | ' % \
                (dataroot, chip, chan, cm, ts ) + \
              'xargs xzcat | ' + \
              '%s %s %s %s %s | ' % \
                (filter_samples, cmin, cmax, rmin, rmax) + \
              '%s %s %s %s %s > /dev/null 2>&1' % \
-               (channel_matrix, output, cmin, cmax, min_count), \
-             shell=True, stdout=PIPE)
+               (channel_matrix, output, cmin, cmax, min_count)
+
+    print cmdline
+
+    p= Popen(cmdline, shell=True, stdout=PIPE)
     pipes.append(p)
 
 for p in pipes:
