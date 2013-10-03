@@ -17,7 +17,7 @@ main(int argc, char *argv[]) {
     FILE *out;
     int rmin= INT_MIN, rmax= INT_MAX;
     int climit= -1;
-    int *counts;
+    int *counts= NULL;
     int discard= 0;
     size_t malformed= 0, out_of_range= 0;
     char buf[MAXLINE];

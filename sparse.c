@@ -215,7 +215,6 @@ bsc_normalise(bsc_hist_t *H) {
                 /* Increment in destination array. */
                 i++;
             }
-            else M->entries[i]= 0.0;
         }
     }
     M->ci[c]= i;
