@@ -12,10 +12,11 @@ main(int argc, char *argv[]) {
     FILE *in;
     csc_mat_t *M;
     csc_errno_t e;
+    int cmin= INT_MAX, cmax= 0, ccount;
     int nrow, ncol, rowbin, colskip;
-    int cmin, cmax, ccount;
-    int c;
-    float *bins;
+    int xmin= INT_MAX, xmax= 0, ymin= INT_MAX, ymax= 0;
+    int c, x, y;
+    float *plot;
 
     if(argc < 4) {
         fprintf(stderr, "Usage: %s <matrix_filename> <nrow> <ncol>\n",
@@ -46,67 +47,58 @@ main(int argc, char *argv[]) {
     printf("# ");
     csc_stats(M);
 
-    if(nrow > M->nrow) {
-        fprintf(stderr, "nrow too large\n");
-        exit(EXIT_FAILURE);
-    }
+    if(nrow > M->nrow) nrow= M->nrow;
 
-    if(ncol > M->ncol) {
-        fprintf(stderr, "ncol too large\n");
-        exit(EXIT_FAILURE);
-    }
+    if(ncol > M->ncol) ncol= M->ncol;
 
     if(STRIDE_OF(M) != 1) {
         fprintf(stderr, "Too lazy to handle strided matrices\n");
         exit(EXIT_FAILURE);
     }
 
-    cmax= 0;
-    cmin= INT_MAX;
-
     for(c= 0; c < M->ncol; c++) {
-        int is= M->ci[c], ie= M->ci[c+1];
-
-        if(is < ie) {
+        if(M->ci[c] < M->ci[c+1]) {
             if(c < cmin) cmin= c;
             if(c > cmax) cmax= c;
         }
     }
     ccount= cmax - cmin + 1;
+    if(ncol > ccount) ncol= ccount;
 
-    if(ccount < ncol) ncol= ccount;
+    plot= calloc(nrow * ncol, sizeof(float));
 
-    printf("# %d rows %d cols\n", nrow, ncol);
-
-    rowbin= M->nrow / nrow;
-
-    colskip= M->ncol / ncol;
-
-    bins= calloc(nrow, sizeof(float));
-    if(!bins) {
-        perror("calloc");
-        exit(EXIT_FAILURE);
-    }
-
-    for(c= 0; c < M->ncol; c+=colskip) {
-        int i, b;
-
-        bzero(bins, nrow * sizeof(float));
+    for(c= 0; c < M->ncol; c++) {
+        int i;
 
         for(i= M->ci[c]; i < M->ci[c+1]; i++) {
-            int r= M->rows[i];
-            b= (r * nrow) / M->nrow;
-            bins[b]+= M->entries[i];
-        }
+            if(M->entries[i] > 0) {
+                int r= M->rows[i];
+                int x= (r * nrow) / M->nrow;
+                int y= ((c-cmin) * ncol) / ccount;
 
-        for(b= 0; b < nrow; b++) {
-            printf("%f %d %.12e\n",
-                ((float)(b * rowbin) + ((b+1) * rowbin - 1))/2,
-                c, bins[b] / rowbin);
+                plot[y * nrow + x]+= M->entries[i];
+
+                if(x < xmin) xmin= x;
+                if(x > xmax) xmax= x;
+                if(y < ymin) ymin= y;
+                if(y > ymax) ymax= y;
+            }
         }
     }
 
-    free(bins);
+    rowbin= M->nrow / nrow;
+    colskip= ccount / ncol;
+    for(x= xmin; x <= xmax; x++) {
+        int r= ((x * rowbin) + ((x+1) * rowbin -1))/2;
+
+        for(y= ymin; y <= ymax; y++) {
+            int c= y * colskip + cmin;
+
+            printf("%d %d %.12e\n", r, c, plot[y * nrow + x] / rowbin);
+        }
+    }
+
+    free(plot);
     csc_mat_destroy(M);
 
     return 0;
