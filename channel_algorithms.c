@@ -97,7 +97,7 @@ blahut_arimoto(csc_mat_t *Q, float epsilon, float *e_obs) {
             Il_best= Il; e_best= e;
         }
 
-        D("Il= %.6e Iu= %.6e e= %.6e %d %d %d %d\n", Il, Iu, e);
+        D("Il= %.6e Iu= %.6e e= %.6e\n", Il, Iu, e);
         if(e < epsilon || (Il==Il_last && Iu==Iu_last)) break;
 
         Il_last= Il; Iu_last= Iu;

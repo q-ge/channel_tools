@@ -8,6 +8,7 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "log.h"
 #include "sparse.h"
 #include "dSFMT-src-2.2.1/dSFMT.h"
 #include "channel_algorithms.h"
@@ -28,17 +29,17 @@ sample(dv_t *cp, dsfmt_t *rng) {
 }
 
 csc_mat_t *
-sampled_matrix(dv_t *cp, int cols, int samples, dsfmt_t *rng) {
+sampled_matrix(dv_t *cp, int rows, int samples, dsfmt_t *rng) {
     bsc_hist_t *H;
     csc_mat_t *M;
-    int c;
+    int r;
 
     H= bsc_hist_new();
-    for(c= 0; c < cols; c++) {
+    for(r= 0; r < rows; r++) {
         int i;
 
         for(i= 0; i < samples; i++) {
-            int r= sample(cp, rng);
+            int c= sample(cp, rng);
             bsc_hist_count(H, c, r, 1);
         }
     }
@@ -50,44 +51,64 @@ sampled_matrix(dv_t *cp, int cols, int samples, dsfmt_t *rng) {
 dv_t *
 average_cols(csc_mat_t *M) {
     dv_t *v;
-    int64_t i;
-    float Pc;
+    int c;
+    float Ps= 0.0;
 
-    v= dv_new(M->nrow);
+    v= dv_new(M->ncol);
     if(!v) {
         perror("dv_new");
         exit(EXIT_FAILURE);
     }
     dv_zero(v);
 
-    /* Tally all matrix elements by row. */
-    for(i= 0; i < M->nnz; i++)
-        v->entries[M->rows[i]]+= M->entries[i];
+    /* Sum along every column. */
+    for(c= 0; c < M->ncol; c++) {
+        int64_t i;
 
-    /* Scale the rows down, and find cumulative prob. */
-    Pc= 0.0;
-    for(i= 0; i < v->length; i++) {
-        Pc+= v->entries[i] / M->nrow;
-        v->entries[i]= Pc;
+        for(i= M->ci[c]; i < M->ci[c+1]; i++) {
+            if(M->entries[i] == 0) continue;
+            v->entries[c]+= M->entries[i];
+        }
     }
 
     /* Rescale to ensure total prob = 1 */
-    for(i= 0; i < v->length; i++)
-        v->entries[i]/= Pc;
+    for(c= 0; c < v->length; c++) Ps+= v->entries[c];
+    for(c= 0; c < v->length; c++) v->entries[c]/= Ps;
 
     return v;
+}
+
+dv_t *
+accumulate_prob(dv_t *p) {
+    dv_t *cp;
+    float Pc= 0.0;
+    int i;
+
+    cp= dv_new(p->length);
+    if(!cp) {
+        perror("dv_new");
+        exit(EXIT_FAILURE);
+    }
+
+    for(i= 0; i < p->length; i++) {
+        Pc+= p->entries[i];
+        cp->entries[i]= Pc;
+    }
+
+    return cp;
 }
 
 pthread_mutex_t output_lock= PTHREAD_MUTEX_INITIALIZER;
 
 void
-noisy_matrices(dv_t *cp, float epsilon, int n, int cols,
+noisy_matrices(dv_t *cp, float epsilon, int n, int rows,
         int samples, dsfmt_t *rng) {
     int i;
 
     for(i= 0; i < n; i++) {
-        csc_mat_t *M= sampled_matrix(cp, cols, samples, rng);
+        csc_mat_t *M= sampled_matrix(cp, rows, samples, rng);
         float I, e;
+        csc_check(M, 1);
         I= blahut_arimoto(M, epsilon, &e);
         csc_mat_destroy(M);
         pthread_mutex_lock(&output_lock);
@@ -100,7 +121,7 @@ struct job {
     dv_t *cp;
     float epsilon;
     int n;
-    int cols;
+    int rows;
     int samples;
     dsfmt_t rng;
     pthread_t thread;
@@ -109,7 +130,7 @@ struct job {
 static void *
 worker(void *arg) {
     struct job *j= (struct job *)arg;
-    noisy_matrices(j->cp, j->epsilon, j->n, j->cols, j->samples, &j->rng);
+    noisy_matrices(j->cp, j->epsilon, j->n, j->rows, j->samples, &j->rng);
     return (void *)0;
 }
 
@@ -118,7 +139,7 @@ main(int argc, char *argv[]) {
     FILE *in;
     csc_mat_t *M;
     csc_errno_t e;
-    dv_t *cum_prob;
+    dv_t *avg_prob, *cum_prob;
     int samples, runs, runs_per_job;
     float epsilon;
     int nthreads;
@@ -161,11 +182,14 @@ main(int argc, char *argv[]) {
 
     if(!quiet) fprintf(stderr, "Averaging matrix columns...");
     if(!quiet) fflush(stderr);
-    cum_prob= average_cols(M);
+    avg_prob= average_cols(M);
+    cum_prob= accumulate_prob(avg_prob);
     if(!quiet) fprintf(stderr, " done.\n");
 
     nthreads= sysconf(_SC_NPROCESSORS_ONLN);
     if(nthreads < 1) nthreads= 1;
+
+    write_log_table();
 
     jobs= malloc(nthreads * sizeof(struct job));
     if(!jobs) {
@@ -180,7 +204,7 @@ main(int argc, char *argv[]) {
         jobs[i].cp= cum_prob;
         jobs[i].epsilon= epsilon;
         jobs[i].n= runs_per_job;
-        jobs[i].cols= M->ncol;
+        jobs[i].rows= M->nrow;
         jobs[i].samples= samples;
         seed= random();
         dsfmt_init_gen_rand(&jobs[i].rng, seed);
