@@ -113,7 +113,8 @@ noisy_matrices(float cap, dv_t *lcp, dv_t *rcp, float epsilon, int n,
         csc_mat_t *M= sampled_matrix(lcp, rcp, rows, samples, rng);
         float I, e;
         //csc_check(M, 1);
-        I= blahut_arimoto_precise(M, epsilon, &e);
+        //I= blahut_arimoto_precise(M, epsilon, &e);
+        I= ba_phased(M, epsilon, &e);
         csc_mat_destroy(M);
         pthread_mutex_lock(&output_lock);
         printf("%.12e %.12e %.12e\n", cap, I, e);

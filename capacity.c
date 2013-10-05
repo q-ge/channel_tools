@@ -52,7 +52,10 @@ main(int argc, char *argv[]) {
     }
 #endif
     //c= blahut_arimoto(Q, epsilon, &e_obs);
-    c= blahut_arimoto_precise(Q, epsilon, &e_obs);
+    //c= blahut_arimoto_precise(Q, epsilon, &e_obs);
+    //c= blahut_arimoto_precise_squeezed(Q, epsilon, &e_obs);
+    //c= blahut_arimoto_ld_squeezed(Q, epsilon, &e_obs);
+    c= ba_phased(Q, epsilon, &e_obs);
 #ifdef CAP_BENCH
     if(clock_gettime(CLOCK_REALTIME, &end)) {
         perror("clock_gettime"); abort();
