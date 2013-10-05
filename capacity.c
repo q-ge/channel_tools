@@ -51,7 +51,8 @@ main(int argc, char *argv[]) {
         perror("clock_gettime"); abort();
     }
 #endif
-    c= blahut_arimoto(Q, epsilon, &e_obs);
+    //c= blahut_arimoto(Q, epsilon, &e_obs);
+    c= blahut_arimoto_precise(Q, epsilon, &e_obs);
 #ifdef CAP_BENCH
     if(clock_gettime(CLOCK_REALTIME, &end)) {
         perror("clock_gettime"); abort();
