@@ -31,7 +31,7 @@ DEBUG_EXECUTABLES= test_sparse test_hist
 
 EXECUTABLES=speed_sparse channel_matrix analyse capacity analyse_mat \
             mult stride extract_plot sample_error channel_hist \
-            summarise filter_samples
+            summarise filter_samples drop_samples
 ifdef DEBUG
 EXECUTABLES+= $(DEBUG_EXECUTABLES)
 endif
