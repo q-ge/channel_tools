@@ -385,7 +385,10 @@ ba_phased(csc_mat_t *Q, float epsilon, float *e_obs) {
         som+= col_min;
     }
 
-    lambda= 1.0 / (1.0 - som);
+    if(som == INFINITY || som == 1.0)
+        lambda= 1.0;
+    else
+        lambda= 1.0 / (1.0 - som);
     D("lambda= %.e\n", lambda);
 
     /* Start with a uniform input distribution. */
