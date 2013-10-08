@@ -89,6 +89,43 @@ subprocess.call("%s %s %d %d < %s" \
     % (channel_matrix, matrix[1], mod_range[0], mod_range[1], \
        samples_file[1]), shell=True)
 
+print "Calculating bandwidth for partitioned datasets"
+
+partitioned_output= file(run_name + ".part", "w")
+
+for s in sizes:
+    print "  Building subsampled channel matrices of size %d..." % s,
+    sys.stdout.flush()
+    discards= []
+    S= 0
+    for s in sizes:
+        discards.append(S)
+        S+= s
+    subsampled_channels= [tempfile.mkstemp() for s in sizes]
+    pipes= [subprocess.Popen("%s %s %d %d %d %d < %s > /dev/null" % \
+        (channel_matrix, subsampled_channels[i][1], \
+         mod_range[0], mod_range[1], s, discards[i], samples_file[1]), \
+        shell=True, stdout=subprocess.PIPE) for i in xrange(len(sizes))]
+
+    for p in pipes:
+        sodata, sedata= p.communicate()
+
+    # Calculate capacities
+    pipes= [subprocess.Popen("%s %s %f -q" % \
+        (capacity, subsampled_channels[i][1], epsilon), \
+        shell=True, stdout=subprocess.PIPE) for i in xrange(len(sizes))]
+
+    for p in pipes:
+        sodata, sedata= p.communicate()
+        cap= float(sodata.strip().split(' ')[0])
+        partitioned_output.write("%d %.12f\n" % (s, cap))
+         
+    for ssc in subsampled_channels:
+        os.unlink(ssc[1])
+    print "done."
+
+del(partitioned_output)
+
 print "Simulating noisy channel matrices"
 
 sim_output= file(run_name + ".sim", "w")

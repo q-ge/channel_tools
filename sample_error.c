@@ -288,7 +288,7 @@ main(int argc, char *argv[]) {
     dv_t *top_half, *bot_half;
     int samples, runs, runs_per_job;
     float epsilon;
-    int cap_steps;
+    int cap_steps, start_step, end_step;
     int nthreads;
     struct job *jobs;
     int seed;
@@ -297,10 +297,11 @@ main(int argc, char *argv[]) {
 
     srandom(time(NULL));
 
-    if(argc < 6) {
+    if(argc < 8) {
         fprintf(stderr,
                 "Usage: %s <channel matrix> <samples per column> "
-                "<runs> <max error> <capacity steps> [-q]\n", argv[0]);
+                "<runs> <max error> <capacity steps> <start step> "
+                "<end step> [-q]\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
@@ -311,8 +312,10 @@ main(int argc, char *argv[]) {
     runs= atoi(argv[3]);
     epsilon= atof(argv[4]);
     cap_steps= atoi(argv[5]);
+    start_step= atoi(argv[6]);
+    end_step= atoi(argv[7]);
 
-    if(argc > 6 && !strcmp(argv[6], "-q"))
+    if(argc > 8 && !strcmp(argv[8], "-q"))
         quiet= 1;
 
     M= csc_load_binary(in, &e);
@@ -348,7 +351,7 @@ main(int argc, char *argv[]) {
     if(!quiet) fprintf(stderr, "Generating noisy matrices...");
     if(!quiet) fflush(stderr);
 
-    for(s= 0; s < cap_steps; s++) {
+    for(s= start_step; s < end_step; s++) {
         dv_t *left_prob, *right_prob,
              *left_cprob, *right_cprob;
         float alpha= 0.5 + s * (0.5 / cap_steps);

@@ -31,7 +31,7 @@ for chip in os.listdir(root):
     if not os.path.isdir(os.path.join(root, chip)):
         continue
     if chip == "simulation" or chip == "analysis" or \
-       chip == "quarantine":
+       chip == "quarantine" or chip == "alternate":
         continue
 
     if not machine:
@@ -118,7 +118,8 @@ for chip in os.listdir(root):
                             (" ".join(jp), rootdir, rge[0], rge[1], \
                              res_rge[0], res_rge[1], \
                              "%s.ool" % name, "%s.mal" % name), \
-                            shell=True, stdout=PIPE) for jp in job_paths]
+                            shell=True, stdout=PIPE) for jp in job_paths
+                            if len(jp) > 0]
 
                 for p in pipes:
                     stdoutdata, stderrdata= p.communicate()
