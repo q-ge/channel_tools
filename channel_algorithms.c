@@ -8,7 +8,7 @@
 #include "log.h"
 #include "sparse.h"
 
-#undef DEBUG_CAPACITY
+#define DEBUG_CAPACITY
 
 #ifdef DEBUG_CAPACITY
 #define D(fmt,...) fprintf(stderr,fmt,## __VA_ARGS__)
@@ -375,7 +375,8 @@ ba_phased(csc_mat_t *Q, float epsilon, float *e_obs) {
     for(col= 0; col < Q->ncol; col++) {
         float col_min= INFINITY;
 
-        if(Q->ci[col] >= Q->ci[col+1]) continue;
+        /* If there's a zero in this column, the minimum is zero. */
+        if(Q->ci[col+1] - Q->ci[col+1] < Q->nrow) continue;
 
         for(i= Q->ci[col]; i < Q->ci[col+1]; i++) {
             if(Q->entries[i] < col_min)
@@ -389,6 +390,7 @@ ba_phased(csc_mat_t *Q, float epsilon, float *e_obs) {
         lambda= 1.0;
     else
         lambda= 1.0 / (1.0 - som);
+    D("som= %.e\n", som);
     D("lambda= %.e\n", lambda);
 
     /* Start with a uniform input distribution. */
