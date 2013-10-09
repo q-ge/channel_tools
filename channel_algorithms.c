@@ -30,6 +30,9 @@ dv_normalise(dv_t *v) {
     for(i= 0; i < v->length; i++) v->entries[i]/= Ps;
 }
 
+#define GRACE_PERIOD 25
+#define NONMONOTONIC_TOLERANCE 4
+
 float
 single_phase(csc_mat_t *Q, float epsilon, float *e_obs, float *p,
         float lambda) {
@@ -39,6 +42,7 @@ single_phase(csc_mat_t *Q, float epsilon, float *e_obs, float *p,
     int col, row;
     float *logQ, *logq;
     float tmp;
+    int increases= 0, iterations= 0;
 
     D("Single-precision phase\n");
 
@@ -127,20 +131,26 @@ single_phase(csc_mat_t *Q, float epsilon, float *e_obs, float *p,
             break;
         }
         if(e >= e_last) {
-            D("Reached precision limit\n");
-            break;
+            if(iterations > GRACE_PERIOD) {
+                increases++;
+                if(increases > NONMONOTONIC_TOLERANCE) {
+                    D("Reached precision limit\n");
+                    break;
+                }
+            }
         }
+        iterations++;
 
         e_last= e;
 
-        /* Find the denominator of the probability scale equation. */
-        tmp= 0.0;
-        for(row= 0; row < Q->nrow; row++)
-            tmp+= p[row] * exp2f(lambda * z[row]);
-
         /* Scale the input probabilities. */
+        tmp= 0.0;
+        for(row= 0; row < Q->nrow; row++) {
+            p[row]*= exp2f(lambda * z[row]);
+            tmp+= p[row];
+        }
         for(row= 0; row < Q->nrow; row++)
-            p[row]= p[row] * exp2f(lambda * z[row]) / tmp;
+            p[row]/= tmp;
     } 
 
     free(logq);
@@ -161,6 +171,7 @@ double_phase(csc_mat_t *Q, float epsilon, float *e_obs, double *p,
     int col, row;
     double *logQ, *logq;
     double tmp;
+    int increases= 0, iterations= 0;
 
     D("Double-precision phase\n");
 
@@ -194,7 +205,7 @@ double_phase(csc_mat_t *Q, float epsilon, float *e_obs, double *p,
             }
         }
         if(limited) {
-            D("Reached precision limit\n");
+            D("1 Reached precision limit\n");
             break;
         }
 
@@ -204,7 +215,7 @@ double_phase(csc_mat_t *Q, float epsilon, float *e_obs, double *p,
             logq[col]= log2(q[col]);
         }
         if(limited) {
-            D("Reached precision limit\n");
+            D("2 Reached precision limit\n");
             break;
         }
 
@@ -250,9 +261,15 @@ double_phase(csc_mat_t *Q, float epsilon, float *e_obs, double *p,
             break;
         }
         if(e >= e_last) {
-            D("Reached precision limit\n");
-            break;
+            if(iterations > GRACE_PERIOD) {
+                increases++;
+                if(increases > NONMONOTONIC_TOLERANCE) {
+                    D("Reached precision limit\n");
+                    break;
+                }
+            }
         }
+        iterations++;
 
         e_last= e;
 
@@ -284,6 +301,7 @@ long_double_phase(csc_mat_t *Q, float epsilon, float *e_obs,
     int col, row;
     long double *logQ, *logq;
     long double tmp;
+    int increases= 0, iterations= 0;
 
     D("Extended-precision phase\n");
 
@@ -312,12 +330,12 @@ long_double_phase(csc_mat_t *Q, float epsilon, float *e_obs,
 
             q[col]= 0.0;
             for(i= Q->ci[col]; i < Q->ci[col+1]; i++) {
-                if(q[col] == 0) limited= 1;
+                if(p[Q->rows[i]] == 0) limited= 1;
                 q[col]+= Q->entries[i] * p[Q->rows[i]];
             }
         }
         if(limited) {
-            D("Reached precision limit\n");
+            D("1 Reached precision limit\n");
             break;
         }
 
@@ -327,7 +345,7 @@ long_double_phase(csc_mat_t *Q, float epsilon, float *e_obs,
             logq[col]= log2l(q[col]);
         }
         if(limited) {
-            D("Reached precision limit\n");
+            D("2 Reached precision limit\n");
             break;
         }
 
@@ -373,9 +391,15 @@ long_double_phase(csc_mat_t *Q, float epsilon, float *e_obs,
             break;
         }
         if(e >= e_last) {
-            D("Reached precision limit\n");
-            break;
+            if(iterations > GRACE_PERIOD) {
+                increases++;
+                if(increases > NONMONOTONIC_TOLERANCE) {
+                    D("Reached precision limit\n");
+                    break;
+                }
+            }
         }
+        iterations++;
 
         e_last= e;
 
@@ -397,6 +421,8 @@ long_double_phase(csc_mat_t *Q, float epsilon, float *e_obs,
     if(e_obs) *e_obs= e_best;
     return Il_best;
 }
+
+#define JIGGER 1e-3
 
 float
 ba_phased(csc_mat_t *Q, float epsilon, float *e_obs) {
@@ -447,7 +473,18 @@ ba_phased(csc_mat_t *Q, float epsilon, float *e_obs) {
 
     pd= malloc(Q->nrow * sizeof(double));
     if(!pd) { perror("malloc"); abort(); }
-    for(i= 0; i < Q->nrow; i++) pd[i]= (double)ps[i];
+    {
+        double sum= 0.0;
+        for(i= 0; i < Q->nrow; i++) {
+            /* If we had an underflow, bump it up a little. */
+            if(ps[i] == 0.0)
+                pd[i]= ((double)JIGGER) / Q->nrow;
+            else
+                pd[i]= (double)ps[i];
+            sum+= pd[i];
+        }
+        for(i= 0; i < Q->nrow; i++) pd[i]/= sum;
+    }
     free(ps);
 
     Il= double_phase(Q, epsilon, &e_phase, pd, lambda, Il, e_phase);
@@ -460,7 +497,17 @@ ba_phased(csc_mat_t *Q, float epsilon, float *e_obs) {
 
     pld= malloc(Q->nrow * sizeof(long double));
     if(!pld) { perror("malloc"); abort(); }
-    for(i= 0; i < Q->nrow; i++) pld[i]= (long double)pd[i];
+    {
+        long double sum= 0.0;
+        for(i= 0; i < Q->nrow; i++) {
+            if(pd[i] == 0.0)
+                pld[i]= ((long double)JIGGER) / Q->nrow;
+            else
+                pld[i]= (long double)pd[i];
+            sum+= pld[i];
+        }
+        for(i= 0; i < Q->nrow; i++) pld[i]/= sum;
+    }
     free(pd);
 
     Il= long_double_phase(Q, epsilon, &e_phase, pld, lambda, Il, e_phase);
