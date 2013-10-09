@@ -51,10 +51,6 @@ main(int argc, char *argv[]) {
         perror("clock_gettime"); abort();
     }
 #endif
-    //c= blahut_arimoto(Q, epsilon, &e_obs);
-    //c= blahut_arimoto_precise(Q, epsilon, &e_obs);
-    //c= blahut_arimoto_precise_squeezed(Q, epsilon, &e_obs);
-    //c= blahut_arimoto_ld_squeezed(Q, epsilon, &e_obs);
     c= ba_phased(Q, epsilon, &e_obs);
 #ifdef CAP_BENCH
     if(clock_gettime(CLOCK_REALTIME, &end)) {
@@ -66,7 +62,7 @@ main(int argc, char *argv[]) {
     if(!quiet)
         printf("Channel capacity is %e(+%e,-0) bits per usage.\n", c, e_obs);
     else
-        printf("%.12e %.12e\n", c, e_obs);
+        printf("%.12e %.12e\n", c, c + e_obs);
 
 #ifdef CAP_BENCH
     {
