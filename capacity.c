@@ -44,6 +44,8 @@ main(int argc, char *argv[]) {
     write_log_table();
     if(!quiet) printf(" done.\n");
 
+    csc_prune_cols(Q);
+
     if(!quiet) printf("Finding capacity with target precision %.3e...", epsilon);
     fflush(stdout);
 #ifdef CAP_BENCH

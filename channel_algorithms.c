@@ -35,7 +35,7 @@ single_phase(csc_mat_t *Q, float epsilon, float *e_obs, float *p,
         float lambda) {
     float *q, *z;
     float Il, Iu, e, e_last= *e_obs;
-    float Il_best, e_best= INFINITY;
+    float Il_best= 0.0, e_best= INFINITY;
     int col, row;
     float *logQ, *logq;
     float tmp;
@@ -59,18 +59,32 @@ single_phase(csc_mat_t *Q, float epsilon, float *e_obs, float *p,
     if(!logq) { perror("malloc"); abort(); }
 
     while(1) {
+        int limited= 0;
+
         /* Calculate q - output distribution. */
         for(col= 0; col < Q->ncol; col++) {
             int i;
 
             q[col]= 0.0;
-            for(i= Q->ci[col]; i < Q->ci[col+1]; i++)
+            for(i= Q->ci[col]; i < Q->ci[col+1]; i++) {
+                if(p[Q->rows[i]] == 0) limited= 1;
                 q[col]+= Q->entries[i] * p[Q->rows[i]];
+            }
+        }
+        if(limited) {
+            D("Reached precision limit\n");
+            break;
         }
 
         /* Precalculate log(q). */
-        for(col= 0; col < Q->ncol; col++)
+        for(col= 0; col < Q->ncol; col++) {
+            if(q[col] == 0) limited= 1;
             logq[col]= log2f(q[col]);
+        }
+        if(limited) {
+            D("Reached precision limit\n");
+            break;
+        }
 
         /* Calculate KL divergence. */
         bzero(z, Q->nrow * sizeof(float));
@@ -84,7 +98,6 @@ single_phase(csc_mat_t *Q, float epsilon, float *e_obs, float *p,
 
                 /* Use the log tables. */
                 z[row]+= Q->entries[i] * (logQ[i] - logq[col]);
-
             }
         }
 
@@ -141,10 +154,10 @@ single_phase(csc_mat_t *Q, float epsilon, float *e_obs, float *p,
 
 float
 double_phase(csc_mat_t *Q, float epsilon, float *e_obs, double *p,
-        float lambda) {
+        float lambda, float Il_best_prev, float e_best_prev) {
     double *q, *z;
     double Il, Iu, e, e_last= INFINITY;
-    double Il_best, e_best= INFINITY;
+    double Il_best= Il_best_prev, e_best= e_best_prev;
     int col, row;
     double *logQ, *logq;
     double tmp;
@@ -168,18 +181,32 @@ double_phase(csc_mat_t *Q, float epsilon, float *e_obs, double *p,
     if(!logq) { perror("malloc"); abort(); }
 
     while(1) {
+        int limited= 0;
+
         /* Calculate q - output distribution. */
         for(col= 0; col < Q->ncol; col++) {
             int i;
 
             q[col]= 0.0;
-            for(i= Q->ci[col]; i < Q->ci[col+1]; i++)
+            for(i= Q->ci[col]; i < Q->ci[col+1]; i++) {
+                if(p[Q->rows[i]] == 1) limited= 1;
                 q[col]+= Q->entries[i] * p[Q->rows[i]];
+            }
+        }
+        if(limited) {
+            D("Reached precision limit\n");
+            break;
         }
 
         /* Precalculate log(q). */
-        for(col= 0; col < Q->ncol; col++)
+        for(col= 0; col < Q->ncol; col++) {
+            if(q[col] == 0) limited= 1;
             logq[col]= log2(q[col]);
+        }
+        if(limited) {
+            D("Reached precision limit\n");
+            break;
+        }
 
         /* Calculate KL divergence. */
         bzero(z, Q->nrow * sizeof(double));
@@ -250,10 +277,10 @@ double_phase(csc_mat_t *Q, float epsilon, float *e_obs, double *p,
 
 float
 long_double_phase(csc_mat_t *Q, float epsilon, float *e_obs,
-        long double *p, float lambda) {
+        long double *p, float lambda, float Il_best_prev, float e_best_prev) {
     long double *q, *z;
     long double Il, Iu, e, e_last= INFINITY;
-    long double Il_best, e_best= INFINITY;
+    long double Il_best= Il_best_prev, e_best= e_best_prev;
     int col, row;
     long double *logQ, *logq;
     long double tmp;
@@ -277,18 +304,32 @@ long_double_phase(csc_mat_t *Q, float epsilon, float *e_obs,
     if(!logq) { perror("malloc"); abort(); }
 
     while(1) {
+        int limited= 0;
+
         /* Calculate q - output distribution. */
         for(col= 0; col < Q->ncol; col++) {
             int i;
 
             q[col]= 0.0;
-            for(i= Q->ci[col]; i < Q->ci[col+1]; i++)
+            for(i= Q->ci[col]; i < Q->ci[col+1]; i++) {
+                if(q[col] == 0) limited= 1;
                 q[col]+= Q->entries[i] * p[Q->rows[i]];
+            }
+        }
+        if(limited) {
+            D("Reached precision limit\n");
+            break;
         }
 
         /* Precalculate log(q). */
-        for(col= 0; col < Q->ncol; col++)
+        for(col= 0; col < Q->ncol; col++) {
+            if(q[col] == 0) limited= 1;
             logq[col]= log2l(q[col]);
+        }
+        if(limited) {
+            D("Reached precision limit\n");
+            break;
+        }
 
         /* Calculate KL divergence. */
         bzero(z, Q->nrow * sizeof(long double));
@@ -409,7 +450,7 @@ ba_phased(csc_mat_t *Q, float epsilon, float *e_obs) {
     for(i= 0; i < Q->nrow; i++) pd[i]= (double)ps[i];
     free(ps);
 
-    Il= double_phase(Q, epsilon, &e_phase, pd, lambda);
+    Il= double_phase(Q, epsilon, &e_phase, pd, lambda, Il, e_phase);
 
     if(e_phase < epsilon) {
         *e_obs= e_phase;
@@ -422,7 +463,7 @@ ba_phased(csc_mat_t *Q, float epsilon, float *e_obs) {
     for(i= 0; i < Q->nrow; i++) pld[i]= (long double)pd[i];
     free(pd);
 
-    Il= long_double_phase(Q, epsilon, &e_phase, pld, lambda);
+    Il= long_double_phase(Q, epsilon, &e_phase, pld, lambda, Il, e_phase);
 
     free(pld);
 
