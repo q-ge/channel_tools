@@ -1,5 +1,7 @@
 #include <assert.h>
+#include <inttypes.h>
 #include <limits.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,9 +14,9 @@ main(int argc, char *argv[]) {
     FILE *in;
     csc_mat_t *M;
     csc_errno_t e;
-    int cmin= INT_MAX, cmax= 0, ccount;
-    int nrow, ncol, rowbin, colskip;
-    int xmin= INT_MAX, xmax= 0, ymin= INT_MAX, ymax= 0;
+    uint64_t cmin= ULONG_MAX, cmax= 0, ccount;
+    uint64_t nrow, ncol, rowbin, colskip;
+    uint64_t xmin= ULONG_MAX, xmax= 0, ymin= ULONG_MAX, ymax= 0;
     int c, x, y;
     float *plot;
 
@@ -72,9 +74,9 @@ main(int argc, char *argv[]) {
 
         for(i= M->ci[c]; i < M->ci[c+1]; i++) {
             if(M->entries[i] > 0) {
-                int r= M->rows[i];
-                int x= (r * nrow) / M->nrow;
-                int y= ((c-cmin) * ncol) / ccount;
+                uint64_t r= M->rows[i];
+                uint64_t x= (r * nrow) / M->nrow;
+                uint64_t y= ((c-cmin) * ncol) / ccount;
 
                 plot[y * nrow + x]+= M->entries[i];
 
@@ -89,12 +91,13 @@ main(int argc, char *argv[]) {
     rowbin= M->nrow / nrow;
     colskip= ccount / ncol;
     for(x= xmin; x <= xmax; x++) {
-        int r= ((x * rowbin) + ((x+1) * rowbin -1))/2;
+        uint64_t r= ((x * rowbin) + ((x+1) * rowbin -1))/2;
 
         for(y= ymin; y <= ymax; y++) {
-            int c= y * colskip + cmin;
+            uint64_t c= y * colskip + cmin;
 
-            printf("%d %d %.12e\n", r, c, plot[y * nrow + x] / rowbin);
+            printf("%"PRIu64" %"PRIu64" %.12e\n", r, c,
+                    plot[y * nrow + x] / rowbin);
         }
     }
 
