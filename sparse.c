@@ -1233,6 +1233,17 @@ dv_max(dv_t *u) {
     return x;
 }
 
+/* Normalise such that entries sum to 1. */
+void
+dv_normalise(dv_t *v) {
+    float Ps;
+    int i;
+
+    Ps= 0;
+    for(i= 0; i < v->length; i++) Ps+= v->entries[i];
+    for(i= 0; i < v->length; i++) v->entries[i]/= Ps;
+}
+
 /* Print statistics. */
 void
 bsc_stats(bsc_hist_t *H) {

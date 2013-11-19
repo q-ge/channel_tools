@@ -181,5 +181,7 @@ void dv_zero(dv_t *v);
 float dv_dot(dv_t *u, dv_t *v);
 /* Point-wise maximum. */
 float dv_max(dv_t *u);
+/* Normalise. */
+void dv_normalise(dv_t *v);
 
 #endif /* __SPARSE_H */
