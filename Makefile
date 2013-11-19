@@ -106,6 +106,12 @@ row_average: row_average.o ${SPARSE_OBJS}
 
 TEST_MATRICES=matrix1
 
+ifdef BIGMEM
+    # This matrix requires 2.5GB of memory to build, and roughly 2*ncores GB
+    # to simulate
+    TEST_MATRICES+= matrix2
+endif
+
 TEST_TARGETS= \
     $(patsubst %,test/%.plot,${TEST_MATRICES}) \
     $(patsubst %,test/%.capacity,${TEST_MATRICES}) \
