@@ -17,3 +17,4 @@ log
 summarise
 analysis/*
 filter_samples
+smooth
