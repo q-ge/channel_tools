@@ -10,7 +10,10 @@ mult
 mvec
 speed_sparse
 stride
-test/matrix1
+test/*.capacity
+test/*.cm
+test/*.plot
+test/*.sim
 sample_error
 channel_hist
 log

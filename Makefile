@@ -50,8 +50,6 @@ TESTS=test/matrix1
 
 default: ${EXECUTABLES}
 
-test: ${TESTS}
-
 cpu.mk:
 	./cpu_probe.sh
 
@@ -61,6 +59,7 @@ channel_algorithms.o: channel_algorithms.c channel_algorithms.h
 
 test_sparse: test_sparse.o ${SPARSE_OBJS} testlib.o
 test_sparse: LDFLAGS += -lrt
+test_sparse.o: CFLAGS= -Wall -g -DDEBUG
 
 speed_sparse: speed_sparse.o ${SPARSE_OBJS} testlib.o
 speed_sparse: LDFLAGS += -lrt
@@ -99,14 +98,35 @@ sample_error: sample_error.o ${SPARSE_OBJS} channel_algorithms.o \
 channel_hist: channel_hist.o ${SPARSE_OBJS}
 
 test_hist: test_hist.o ${SPARSE_OBJS}
+test_hist.o: CFLAGS= -Wall -g -DDEBUG
 
 row_average: row_average.o ${SPARSE_OBJS}
 
-# Tests
+### Tests
 
-test/matrix1: test/raw_samples1.xz channel_matrix
+TEST_MATRICES=matrix1
+
+TEST_TARGETS= \
+    $(patsubst %,test/%.plot,${TEST_MATRICES}) \
+    $(patsubst %,test/%.capacity,${TEST_MATRICES}) \
+    $(patsubst %,test/%.sim,${TEST_MATRICES})
+
+%.cm: %.samples.xz channel_matrix
 	xzcat $< | ./channel_matrix $@
+
+%.plot: %.cm extract_plot
+	./extract_plot $< 1024 1024 > $@
+
+%.capacity: %.cm capacity
+	./capacity $< 1e-3 > $@
+
+%.sim: %.cm sample_error
+	./sample_error $< 100 10 1e-3 1 0 1 > $@
+
+test: ${TEST_TARGETS}
+
+###
 
 clean:
 	rm -f *.o ${dSFMT_SRC}/*.o ${EXECUTABLES} ${DEBUG_EXECUTABLES} \
-              ${TESTS} cpu.mk
+              ${TESTS} cpu.mk ${TEST_TARGETS}
