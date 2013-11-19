@@ -1,3 +1,12 @@
+/* testlib.c
+
+   Helpers for both test_hist and test_sparse.
+
+   This code is experimental, and error-handling is primitive.
+*/
+
+/* @LICENSE(NICTA) */
+
 #ifndef __TESTLIB_H
 #define __TESTLIB_H
 

@@ -1,3 +1,12 @@
+/* filter_samples.c
+
+   Filter out-of-range samples.
+
+   This code is experimental, and error-handling is primitive.
+*/
+
+/* @LICENSE(NICTA) */
+
 #include <stdio.h>
 #include <stdlib.h>
 

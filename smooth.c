@@ -1,3 +1,12 @@
+/* smooth.c
+
+   For each input, output Sum([n-r,n+r]).
+
+   This code is experimental, and error-handling is primitive.
+*/
+
+/* @LICENSE(NICTA) */
+
 #include <stdio.h>
 #include <stdlib.h>
 

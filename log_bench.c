@@ -1,3 +1,12 @@
+/* log_bench.c
+
+   Benchmark logarithm implementations.
+
+   This code is experimental, and error-handling is primitive.
+*/
+
+/* @LICENSE(NICTA) */
+
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>

@@ -1,3 +1,12 @@
+/* stride.c
+
+   Stride the given matrix.
+
+   This code is experimental, and error-handling is primitive.
+*/
+
+/* @LICENSE(NICTA) */
+
 #include <stdio.h>
 #include <stdlib.h>
 

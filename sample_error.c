@@ -1,3 +1,14 @@
+/* sample_error.c
+
+   Run a monte-carlo simulation to approximate the distribution of capacities
+   expected if the given matrix had zero bandwidth.  Used to generate
+   confidence intervals.
+
+   This code is experimental, and error-handling is primitive.
+*/
+
+/* @LICENSE(NICTA) */
+
 #include <assert.h>
 #include <limits.h>
 #include <math.h>
@@ -13,11 +24,14 @@
 #include "dSFMT-src-2.2.1/dSFMT.h"
 #include "channel_algorithms.h"
 
+/* Sample from the given distribution. */
 int
 sample(dv_t *cp, dsfmt_t *rng) {
+    /* Choose x in [0,1). */
     float x= dsfmt_genrand_close_open(rng);
     int s= 0, e= cp->length;
 
+    /* Binary search for last point with cumulative probability <= x. */
     while(s+1 < e) {
         int m= (s+e)/2;
 
@@ -28,6 +42,8 @@ sample(dv_t *cp, dsfmt_t *rng) {
     return s;
 }
 
+/* Generate a matrix by taking 'samples' samples per column from the given
+ * distributions, using lcp for the left-hand side and rcp for the right. */
 csc_mat_t *
 sampled_matrix(dv_t *lcp, dv_t *rcp, int rows, int samples, dsfmt_t *rng) {
     bsc_hist_t *H;
@@ -52,6 +68,7 @@ sampled_matrix(dv_t *lcp, dv_t *rcp, int rows, int samples, dsfmt_t *rng) {
     return M;
 }
 
+/* Average along the columns of the matrix. */
 dv_t *
 average_cols(csc_mat_t *M) {
     dv_t *v;
@@ -82,6 +99,7 @@ average_cols(csc_mat_t *M) {
     return v;
 }
 
+/* Calculate the cumulative probability. */
 dv_t *
 accumulate_prob(dv_t *p) {
     dv_t *cp;
@@ -102,27 +120,37 @@ accumulate_prob(dv_t *p) {
     return cp;
 }
 
+/* Don't let the workers trample each other's output. */
 pthread_mutex_t output_lock= PTHREAD_MUTEX_INITIALIZER;
 
+/* Generate n noisy matrices, and print their capacity. */
 void
 noisy_matrices(float cap, dv_t *lcp, dv_t *rcp, float epsilon, int n,
         int rows, int samples, dsfmt_t *rng) {
     int i;
 
     for(i= 0; i < n; i++) {
+        /* Draw the samples. */
         csc_mat_t *M= sampled_matrix(lcp, rcp, rows, samples, rng);
         float I, e;
-        //csc_check(M, 1);
+        /* We may have empty columns, which the ABA doesn't like. */
         csc_prune_cols(M);
+        /* Find the capacity (mutual information). */
         I= ba_phased(M, epsilon, &e);
+        /* Deallocate the matrix. */
         csc_mat_destroy(M);
+        /* Print the capacity. */
         pthread_mutex_lock(&output_lock);
         printf("%.12e %.12e %.12e\n", cap, I, e);
+        /* Very important, as the simulation is long-running and may be
+         * interrupted.  You don't want to lose an hour's calculation in the
+         * buffer. */
         fflush(stdout);
         pthread_mutex_unlock(&output_lock);
     }
 }
 
+/* A worker thread's context. */
 struct job {
     float cap;
     dv_t *lcp;
@@ -135,6 +163,7 @@ struct job {
     pthread_t thread;
 };
 
+/* Worker threads simply call noisy_matrices. */
 static void *
 worker(void *arg) {
     struct job *j= (struct job *)arg;
@@ -143,6 +172,7 @@ worker(void *arg) {
     return (void *)0;
 }
 
+/* Take a distribution and cut it in half. */
 void
 split_prob(dv_t *prob, dv_t **top_half, dv_t **bot_half) {
     int i;
@@ -173,6 +203,7 @@ split_prob(dv_t *prob, dv_t **top_half, dv_t **bot_half) {
      * they'll give the original. */
 }
 
+/* Blend two distributions. */
 dv_t *
 join_prob(dv_t *left, dv_t *right, float alpha) {
     int i;
@@ -202,8 +233,6 @@ join_prob(dv_t *left, dv_t *right, float alpha) {
     return prob;
 }
 
-#define CAP_EPSILON 1e-6
-
 float
 plogp(float p) {
     assert(0.0 <= p);
@@ -217,6 +246,8 @@ h(float p) {
     return -(plogp(p) + plogp(1 - p));
 }
 
+/* Find the mutual information of the two-column matrix [Pa:Pb], given input
+ * distribution (pa, 1-pa). */
 float
 I(dv_t *Pa, dv_t *Pb, float pa) {
     /* Initial entropy */
@@ -239,6 +270,7 @@ I(dv_t *Pa, dv_t *Pb, float pa) {
     return Hi - EHf > 0 ? Hi - EHf : 0;
 }
 
+/* Find the capacity by maximising over pa. */
 float
 find_binary_cap(dv_t *Pa, dv_t *Pb, float epsilon) {
     float Il, Iu, pa;
@@ -363,6 +395,7 @@ main(int argc, char *argv[]) {
         left_cprob= accumulate_prob(left_prob);
         right_cprob= accumulate_prob(right_prob);
 
+        /* Find the capacity of the step matrix. */
         cap= find_binary_cap(left_prob, right_prob, epsilon);
 
         runs_per_job= runs_step / nthreads;

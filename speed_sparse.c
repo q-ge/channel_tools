@@ -1,3 +1,12 @@
+/* speed_sparse.c
+
+   Measure speed of sparse matrix operations.
+
+   This code is experimental, and error-handling is primitive.
+*/
+
+/* @LICENSE(NICTA) */
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>

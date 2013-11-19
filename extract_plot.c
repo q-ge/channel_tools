@@ -1,3 +1,12 @@
+/* extract_plot.c
+
+   Generate a plot of the channel matrix, suitable for gnuplot 'with image'.
+
+   This code is experimental, and error-handling is primitive.
+*/
+
+/* @LICENSE(NICTA) */
+
 #include <assert.h>
 #include <inttypes.h>
 #include <limits.h>

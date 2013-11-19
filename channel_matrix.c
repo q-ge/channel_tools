@@ -1,3 +1,12 @@
+/* channel_matrix.c
+
+   Build a channel matrix from the given samples.
+
+   This code is experimental, and error-handling is primitive.
+*/
+
+/* @LICENSE(NICTA) */
+
 #include <limits.h>
 #include <math.h>
 #include <stdio.h>

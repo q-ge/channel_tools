@@ -1,3 +1,12 @@
+/* summarise.c
+
+   Calculate statistics for the input samples.
+
+   This code is experimental, and error-handling is primitive.
+*/
+
+/* @LICENSE(NICTA) */
+
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>

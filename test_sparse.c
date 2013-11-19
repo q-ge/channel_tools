@@ -1,3 +1,12 @@
+/* test_sparse.c
+
+   Test sparse matrix operations.
+
+   This code is experimental, and error-handling is primitive.
+*/
+
+/* @LICENSE(NICTA) */
+
 #include <assert.h>
 #include <malloc.h>
 #include <mcheck.h>

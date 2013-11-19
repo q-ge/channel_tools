@@ -1,3 +1,12 @@
+/* mult_lin.c
+
+   Measure threaded matrix multiplication speed.
+
+   This code is experimental, and error-handling is primitive.
+*/
+
+/* @LICENSE(NICTA) */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>

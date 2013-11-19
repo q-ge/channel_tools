@@ -1,3 +1,12 @@
+/* drop_samples.c
+
+   Drop n samples from every modulation.
+
+   This code is experimental, and error-handling is primitive.
+*/
+
+/* @LICENSE(NICTA) */
+
 #include <stdio.h>
 #include <stdlib.h>
 

@@ -1,3 +1,12 @@
+/* analyse.c
+
+   Read samples and display histogram statistics.
+
+   This code is experimental, and error-handling is primitive.
+*/
+
+/* @LICENSE(NICTA) */
+
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>

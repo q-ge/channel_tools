@@ -1,3 +1,12 @@
+/* log.c
+
+   Table-based single-precision logarithm.
+
+   This code is experimental, and error-handling is primitive.
+*/
+
+/* @LICENSE(NICTA) */
+
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>

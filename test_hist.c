@@ -1,3 +1,12 @@
+/* test_hist.c
+
+   Test block histogram operations.
+
+   This code is experimental, and error-handling is primitive.
+*/
+
+/* @LICENSE(NICTA) */
+
 #include <assert.h>
 #include <limits.h>
 #include <stdio.h>

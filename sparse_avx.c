@@ -1,4 +1,12 @@
-/* AVX-optimised csc matrix operations. */
+/* sparse_avx.c
+
+   (not very well) AVX-optimised csc matrix operations.
+
+   This code is experimental, and error-handling is primitive.
+*/
+
+/* @LICENSE(NICTA) */
+
 #include <assert.h>
 
 #include <immintrin.h>
@@ -7,136 +15,6 @@
 
 #define likely(x)       __builtin_expect((x),1)
 #define unlikely(x)     __builtin_expect((x),0)
-
-#if 0
-void
-mult_csc_dv_avx(dv_t *y, dv_t *x, csc_mat_t *A, int start, int end) {
-    int c, i;
-
-    assert(x); assert(A); assert(y);
-    assert(STRIDE_OF(A) == 1);
-    assert(A->nrow == x->length);
-    assert(A->ncol == y->length);
-    assert(0 <= start && start <= end && end <= A->ncol);
-
-    for(c= start; c < end; c++) {
-        float tmp= 0.0;
-        __v8sf tmp_v= {0,0,0,0,0,0,0,0};
-        int len= A->ci[c+1] - A->ci[c];
-        __v8sf ones= {1,1,1,1,1,1,1,1};
-        __v8sf dp;
-
-        for(i= 0; i < ROUND_DOWN(len, 8); i+= 8) {
-            int j= A->ci[c] + i;
-            __v8sf A_e= __builtin_ia32_loadups256(A->entries + j);
-            __v8sf x_e= {0,0,0,0,0,0,0,0};
-            __v4sf tmp_x;
-
-            tmp_x[0]= x->entries[A->rows[j]];
-            tmp_x[1]= x->entries[A->rows[j+1]];
-            tmp_x[2]= x->entries[A->rows[j+2]];
-            tmp_x[3]= x->entries[A->rows[j+3]];
-            x_e= __builtin_ia32_vinsertf128_ps256(x_e, tmp_x, 0);
-
-            tmp_x[0]= x->entries[A->rows[j+4]];
-            tmp_x[1]= x->entries[A->rows[j+5]];
-            tmp_x[2]= x->entries[A->rows[j+6]];
-            tmp_x[3]= x->entries[A->rows[j+7]];
-            x_e= __builtin_ia32_vinsertf128_ps256(x_e, tmp_x, 1);
-
-            tmp_v+= A_e * x_e;
-        }
-        dp= __builtin_ia32_dpps256(tmp_v, ones, 0xff);
-        tmp+= dp[4] + dp[0];
-
-        for(; i < len; i++) {
-            int j= A->ci[c] + i;
-            tmp+= A->entries[j] * x->entries[A->rows[j]];
-        }
-
-        y->entries[c]= tmp;
-    }
-}
-#endif
-
-void
-mult_csc_dv_avx(dv_t *y, dv_t *x, csc_mat_t *A, int start, int end) {
-    int c, i;
-    //float stuff= 0;
-
-    assert(x); assert(A); assert(y);
-    assert(STRIDE_OF(A) == 1);
-    assert(A->nrow == x->length);
-    assert(A->ncol == y->length);
-    assert(0 <= start && start <= end && end <= A->ncol);
-
-#if 1
-    for(c= start; c < end; c++) {
-        __v4sf tmp_v= {0,0,0,0};
-        __v4sf ones= {1,1,1,1};
-        __v4sf dp;
-
-        for(i= A->ci[c]; i < A->ci[c+1]; i+= 4) {
-            __v4sf A_e;
-            __v4sf x_e= {0,0,0,0};
-
-#if 0
-            __builtin_prefetch(&x->entries[A->rows[i+4]]);
-            __builtin_prefetch(&x->entries[A->rows[i+5]]);
-            __builtin_prefetch(&x->entries[A->rows[i+6]]);
-            __builtin_prefetch(&x->entries[A->rows[i+7]]);
-#endif
-
-            asm volatile("movntdqa %1, %0" : "=x"(A_e) : "m"(A->entries[i]));
-
-            x_e[0]= x->entries[A->rows[i+0]];
-            x_e[1]= x->entries[A->rows[i+1]];
-            x_e[2]= x->entries[A->rows[i+2]];
-            x_e[3]= x->entries[A->rows[i+3]];
-
-            tmp_v+= A_e * x_e;
-        }
-        dp= __builtin_ia32_dpps(tmp_v, ones, 0xff);
-
-        y->entries[c]= dp[0];
-    }
-#else
-    for(c= start; c < ROUND_DOWN(end,4); c+=1) {
-        __v4sf tmp_v= {0,0,0,0};
-        __v4sf ones= {1,1,1,1};
-        //__v4sf sums= {0,0,0,0};
-        __v4sf dp;
-
-        for(i= A->ci[c]; i < A->ci[c+1]; i+= 4) {
-            //__v4sf A_e;
-            __v4sf A_e= __builtin_ia32_loadups(A->entries + i);
-            __v4sf x_e= {0,0,0,0};
-
-            //asm volatile("movntdqa %1, %0" : "=x"(A_e) : "m"(A->entries[i]));
-
-            x_e[0]= x->entries[A->rows[i+0]];
-            x_e[1]= x->entries[A->rows[i+1]];
-            x_e[2]= x->entries[A->rows[i+2]];
-            x_e[3]= x->entries[A->rows[i+3]];
-#if 0
-            x_e[0]= x->entries[i - A->ci[c]];
-            x_e[1]= x->entries[i - A->ci[c] + 1];
-            x_e[2]= x->entries[i - A->ci[c] + 2];
-            x_e[3]= x->entries[i - A->ci[c] + 3];
-#endif
-
-            tmp_v+= A_e * x_e;
-        }
-        dp= __builtin_ia32_dpps(tmp_v, ones, 0xff);
-
-        //if(i%4 == 0) y->entries[c]= dp[0];
-        y->entries[c]= dp[0];
-        //stuff+= dp[0];
-    }
-#endif
-
-    //y->entries[0]= stuff;
-}
 
 void
 csc_str_mult_nv_4(dv_t *y, dv_t *x, csc_mat_t *A) {

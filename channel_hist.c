@@ -1,3 +1,12 @@
+/* channel_hist.c
+
+   Calculate and display the histogram of the input samples.
+
+   This code is experimental, and error-handling is primitive.
+*/
+
+/* @LICENSE(NICTA) */
+
 #include <assert.h>
 #include <limits.h>
 #include <stdio.h>

@@ -1,3 +1,12 @@
+/* row_average.c
+
+   Average each row of the channel matrix, and print it.
+
+   This code is experimental, and error-handling is primitive.
+*/
+
+/* @LICENSE(NICTA) */
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
