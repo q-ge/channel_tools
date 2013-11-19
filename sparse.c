@@ -1,3 +1,14 @@
+/* sparse.c
+
+   A library for large sparse histograms, and compressed sparse matrices,
+   tailored to support the generation of channel matrices for side-channel
+   analysis.
+
+   This code is experimental, and error-handling is primitive.
+*/
+
+/* @LICENSE(NICTA) */
+
 #include <assert.h>
 #include <limits.h>
 #include <malloc.h>
@@ -17,6 +28,7 @@
     #define D(f,...)
 #endif
 
+/* Allocate and return an empty histogram. */
 bsc_hist_t*
 bsc_hist_new(void) {
     bsc_hist_t *H;
@@ -27,6 +39,7 @@ bsc_hist_new(void) {
     return H;
 }
 
+/* Deallocate a histogram. */
 void
 bsc_hist_destroy(bsc_hist_t *H) {
     int c;
@@ -148,7 +161,7 @@ bsc_extend_col(bsc_hist_t *H, int c, int r) {
     H->entries[c]=    new_col;
 }
 
-/* Increment the count at (r,c) */
+/* Increment the count at (r,c), extending as required. */
 void
 bsc_hist_count(bsc_hist_t *H, int c, int r, int n) {
     assert(H);
@@ -222,19 +235,29 @@ bsc_normalise(bsc_hist_t *H) {
     return M;
 }
 
+/* Size (in bytes) of the allocated histogram. */
 uint64_t
 bsc_size(bsc_hist_t *H) {
     int cols= H->end_col;
+    int rows= H->end_row;
     assert(H);
-    return sizeof(bsc_hist_t) + 3 * cols * sizeof(int)
-                              + cols * sizeof(int *)
-                              + H->nalloc * sizeof(int);
+           /* The root struct. */
+    return sizeof(bsc_hist_t) +
+           /* start_rows and end_rows */
+           2 * cols * sizeof(int) +
+           /* row_total */
+           1 * rows * sizeof(int) +
+           /* entries */
+           cols * sizeof(int *) +
+           /* The entries themselves. */
+           H->nalloc * sizeof(int);
 }
 
 #define FAIL(s,...) { if(verbose) { fprintf(stderr, s, ##__VA_ARGS__); } \
                       return 0; }
 #define SUCCEED() { return 1; }
 
+/* Sanity check the histogram structure. */
 int
 bsc_check(bsc_hist_t *H, int verbose) {
     int r, c;
@@ -287,6 +310,7 @@ bsc_check(bsc_hist_t *H, int verbose) {
     SUCCEED();
 }
 
+/* Sanity check the matrix structure. */
 int
 csc_check(csc_mat_t *M, int verbose) {
     int64_t i;
@@ -393,22 +417,37 @@ csc_check(csc_mat_t *M, int verbose) {
     SUCCEED();
 }
 
+
+/* Size (in bytes) of the allocated matrix. */
 uint64_t
 csc_size(csc_mat_t *M) {
+    /* Strided matrix. */
     if(STRIDE_OF(M) > 1) {
+               /* root struct */
         return sizeof(csc_mat_t) +
+               /* si */
                (M->ncol/STRIDE_OF(M)+1) * sizeof(int32_t) +
+               /* sc */
                (M->nnz) * sizeof(uint8_t) +
+               /* rows */
                (M->nnz) * sizeof(int32_t) +
+               /* entries */
                (M->nnz) * sizeof(float);
     }
+    /* Unstrided matrix. */
     else {
-        return sizeof(csc_mat_t) + (M->ncol+1) * sizeof(int32_t)
-                                 + (M->nnz) * sizeof(int32_t)
-                                 + (M->nnz) * sizeof(float);
+               /* root struct */
+        return sizeof(csc_mat_t) +
+               /* ci */
+               (M->ncol+1) * sizeof(int32_t) +
+               /* rows */
+               (M->nnz) * sizeof(int32_t) +
+               /* entries */
+               (M->nnz) * sizeof(float);
     }
 }
 
+/* Deallocate matrix. */
 void
 csc_mat_destroy(csc_mat_t *M) {
     assert(M);
@@ -442,6 +481,7 @@ static const char *csc_errstr[] = {
     "System error - check errno",
 };
 
+/* Readable errors. */
 void
 csc_perror(csc_errno_t e, const char *s) {
     if(e < 0 || e >= E_CSC_COUNT) return;
@@ -450,6 +490,7 @@ csc_perror(csc_errno_t e, const char *s) {
     else fprintf(stderr, "%s: %s\n", s, csc_errstr[e]);
 }
 
+/* Serialise into FD f */
 csc_errno_t
 csc_store_binary(csc_mat_t *M, FILE *f) {
     if(fputs(CSC_MAGIC, f) == EOF) return E_CSC_ERRNO;
@@ -488,6 +529,7 @@ csc_store_binary(csc_mat_t *M, FILE *f) {
     return E_CSC_SUCCESS;
 }
 
+/* Deserialise from FD f */
 csc_mat_t *
 csc_load_binary(FILE *f, csc_errno_t *e) {
     csc_mat_t *M;
@@ -610,8 +652,6 @@ csc_prune_cols(csc_mat_t *M) {
     if(!M->ci) { perror("realloc"); abort(); }
 }
 
-/* Compute y= x*A, where A is a Compressed-Sparse-Column sparse matrix,
-   and y and x are dense vectors. */
 void
 mult_csc_dv_range(dv_t *y, dv_t *x, csc_mat_t *A, int start, int end) {
     int c, i;
@@ -634,20 +674,21 @@ mult_csc_dv_range(dv_t *y, dv_t *x, csc_mat_t *A, int start, int end) {
         float tmp= 0.0;
         /* Step through the non-zero entries of this column. */
         for(i= A->ci[c]; i < A->ci[c+1]; i++) {
-            //__builtin_prefetch(&x->entries[A->rows[i+1]]);
-            /* Multiply by the appropriate entry of y, and
-               scatter into c. */
+            /* Multiply by the appropriate entry of y. */
             tmp+= A->entries[i] * x->entries[A->rows[i]];
         }
         y->entries[c]= tmp;
     }
 }
 
+/* Compute y= x*A, where A is a Compressed-Sparse-Column sparse matrix,
+   and y and x are dense vectors. */
 void
 mult_csc_dv(dv_t *y, dv_t *x, csc_mat_t *A) {
     mult_csc_dv_range(y, x, A, 0, A->ncol);
 }
 
+/* Threaded multiplication. */
 struct mult_args {
     dv_t *y, *x;
     csc_mat_t *A;
@@ -657,8 +698,6 @@ struct mult_args {
 void *
 mult_thread(void *_args) {
     struct mult_args *args= (struct mult_args *)_args;
-
-    //fprintf(stderr, "%d %d\n", args->start, args->end);
 
     mult_csc_dv_range(args->y, args->x, args->A, args->start, args->end);
 
@@ -748,6 +787,7 @@ csc_str_mult_nv(dv_t *y, dv_t *x, csc_mat_t *A) {
     }
 }
 
+/* Collision-free multiplication. */
 void
 csc_mult_cf(dv_t *y, dv_t *x, csc_mat_t *A) {
     int s;
@@ -984,7 +1024,7 @@ estimate_cfree(csc_mat_t *M, int row_span) {
     return cf_blocks;
 }
 
-/* Re-layout the matrix to be collision free for columns within stride blocks,
+/* Re-lay-out the matrix to be collision free for columns within stride blocks,
    and so that stride blocks have row spans of less than 2^'row_span'.  We
    insert zeroes to pad out the blocks. */
 void
@@ -1080,6 +1120,7 @@ csc_make_cfree(csc_mat_t *M, int row_span) {
     M->flags |= CSC_F_CFREE;
 }
 
+/* Cache-align structures. */
 void
 csc_align(csc_mat_t *M, int n) {
     uint64_t nnz_new;
@@ -1126,6 +1167,7 @@ csc_align(csc_mat_t *M, int n) {
     M->nnz= nnz_new;
 }
 
+/* Allocate a vector. */
 dv_t *
 dv_new(int length) {
     dv_t *x;
@@ -1141,6 +1183,7 @@ dv_new(int length) {
     return x;
 }
 
+/* Deallocate a vector. */
 void
 dv_destroy(dv_t *v) {
     assert(v);
@@ -1149,11 +1192,13 @@ dv_destroy(dv_t *v) {
     free(v);
 }
 
+/* Zero entries. */
 void
 dv_zero(dv_t *v) {
     memset(v->entries, 0, v->length * sizeof(float));
 }
 
+/* Initialise uniformly. */
 void
 dv_uniform(dv_t *v, float x) {
     int i;
@@ -1161,6 +1206,7 @@ dv_uniform(dv_t *v, float x) {
     for(i= 0; i < v->length; i++) v->entries[i]= x;
 }
 
+/* Dot product. */
 float
 dv_dot(dv_t *u, dv_t *v) {
     float x= 0.0;
@@ -1174,6 +1220,7 @@ dv_dot(dv_t *u, dv_t *v) {
     return x;
 }
 
+/* Maximum entry. */
 float
 dv_max(dv_t *u) {
     float x= -INFINITY;
@@ -1186,6 +1233,7 @@ dv_max(dv_t *u) {
     return x;
 }
 
+/* Print statistics. */
 void
 bsc_stats(bsc_hist_t *H) {
     printf("bsc_hist: %dc x %dr, %llunz, %.2fMb, %.2fb/e\n",
@@ -1194,6 +1242,7 @@ bsc_stats(bsc_hist_t *H) {
            (double)bsc_size(H) / H->nnz);
 }
 
+/* Print statistics. */
 void
 csc_stats(csc_mat_t *M) {
     printf("csc_mat: %dc x %dr, %llunz, %.2f%% dense, "

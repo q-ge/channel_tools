@@ -18,3 +18,5 @@ summarise
 analysis/*
 filter_samples
 smooth
+drop_samples
+row_average
