@@ -123,7 +123,8 @@ TEST_TARGETS= \
 %.sim: %.cm sample_error
 	./sample_error $< 100 10 1e-3 1 0 1 > $@
 
-test: ${TEST_TARGETS}
+test: ${TEST_TARGETS} test_sparse
+	./test_sparse
 
 ###
 
