@@ -1,3 +1,11 @@
+# make_plots.sh
+#
+# Extract all channel-matrix plots.
+#
+# This code is experimental, and error-handling is primitive.
+#
+# @LICENSE(NICTA)
+
 #!/bin/bash
 
 scriptroot=$(dirname $0)

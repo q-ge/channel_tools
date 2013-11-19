@@ -1,3 +1,11 @@
+# gen_matrices.py
+#
+# Generate all channel matrices for the given results hierarchy.
+#
+# This code is experimental, and error-handling is primitive.
+#
+# @LICENSE(NICTA)
+
 #!/usr/bin/env python
 
 import os.path

@@ -1,3 +1,11 @@
+# make_matrix.sh
+#
+# Generate a given channel matrix.
+#
+# This code is experimental, and error-handling is primitive.
+#
+# @LICENSE(NICTA)
+
 #!/bin/bash
 
 myroot=$(dirname $0)

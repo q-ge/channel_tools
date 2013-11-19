@@ -1,3 +1,11 @@
+# experiment_stats.py
+#
+# Calculate statistics for all experimental data found in the given hierarchy.
+#
+# This code is experimental, and error-handling is primitive.
+#
+# @LICENSE(NICTA)
+
 #!/usr/bin/env python
 
 import gzip

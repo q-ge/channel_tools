@@ -1,3 +1,11 @@
+# monte_carlo.py
+#
+# Run error simulations for the given channel.
+#
+# This code is experimental, and error-handling is primitive.
+#
+# @LICENSE(NICTA)
+
 #!/usr/bin/env python
 
 import os.path

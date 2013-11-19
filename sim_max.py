@@ -1,3 +1,11 @@
+# sim_max.py
+#
+# Find the greatest simulated capacities.
+#
+# This code is experimental, and error-handling is primitive.
+#
+# @LICENSE(NICTA)
+
 #!/usr/bin/env python
 
 import sys

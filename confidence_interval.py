@@ -1,3 +1,12 @@
+# confidence_interval.py
+#
+# Find the estimated confidence interval for a given capacity, using the
+# output of sample_error.
+#
+# This code is experimental, and error-handling is primitive.
+#
+# @LICENSE(NICTA)
+
 #!/usr/bin/env python
 
 import sys

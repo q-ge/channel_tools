@@ -1,3 +1,11 @@
+# deficit.py
+#
+# Output the number of samples required for each modulation to hit the target.
+#
+# This code is experimental, and error-handling is primitive.
+#
+# @LICENSE(NICTA)
+
 #!/usr/bin/env python
 
 import sys

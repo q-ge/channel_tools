@@ -1,3 +1,11 @@
+# find_capacities.sh
+#
+# Calculate capacity for all channel matrices.
+#
+# This code is experimental, and error-handling is primitive.
+#
+# @LICENSE(NICTA)
+
 #!/bin/bash
 
 scriptroot=$(dirname $0)

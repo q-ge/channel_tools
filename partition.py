@@ -1,3 +1,11 @@
+# partition.py
+#
+# Run error simulations for matrices with limited sample counts.
+#
+# This code is experimental, and error-handling is primitive.
+#
+# @LICENSE(NICTA)
+
 #!/usr/bin/env python
 
 import os.path
