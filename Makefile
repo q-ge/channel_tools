@@ -106,6 +106,8 @@ row_average: row_average.o ${SPARSE_OBJS}
 
 TEST_MATRICES=matrix1
 
+HIST_TEST=matrix1
+
 ifdef BIGMEM
     # This matrix requires 2.5GB of memory to build, and roughly 2*ncores GB
     # to simulate
@@ -116,6 +118,9 @@ TEST_TARGETS= \
     $(patsubst %,test/%.plot,${TEST_MATRICES}) \
     $(patsubst %,test/%.capacity,${TEST_MATRICES}) \
     $(patsubst %,test/%.sim,${TEST_MATRICES})
+
+HIST_TEST_TARGETS= \
+    $(patsubst %,test/%.hist_test,${HIST_TEST})
 
 %.cm: %.samples.xz channel_matrix
 	xzcat $< | ./channel_matrix $@
@@ -129,7 +134,10 @@ TEST_TARGETS= \
 %.sim: %.cm sample_error
 	./sample_error $< 100 10 1e-3 1 0 1 > $@
 
-test: ${TEST_TARGETS} test_sparse
+%.hist_test: %.samples.xz test_hist
+	xzcat $< | ./test_hist > $@
+
+test: ${TEST_TARGETS} ${HIST_TEST_TARGETS} test_sparse
 	./test_sparse
 
 ###

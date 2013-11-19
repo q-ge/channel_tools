@@ -14,6 +14,7 @@ test/*.capacity
 test/*.cm
 test/*.plot
 test/*.sim
+test/*.hist_test
 sample_error
 channel_hist
 log
@@ -24,3 +25,4 @@ smooth
 drop_samples
 row_average
 test_sparse
+test_hist

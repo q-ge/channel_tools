@@ -56,6 +56,8 @@ main(int argc, char *argv[]) {
 
     printf(" done.\n");
 
+    if(!bsc_check(H, 1)) abort();
+
     bsc_stats(H);
 
     col= malloc(H->end_row * sizeof(int));
@@ -64,19 +66,21 @@ main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    printf("Recounting all entries...\n");
+    printf("Recounting all entries...");
     fflush(stdout);
 
     for(c= 0; c < H->end_col; c++) {
         size_t i;
-        if(c != 0 && c % 10 == 0)
-            printf("%d/%d\n", c, H->end_col);
         bzero(col, H->end_row * sizeof(int));
         if(H->end_rows[c] <= H->start_rows[c]) continue;
         for(i= 0; i < nread; i++) {
-            if(data[i].c == c) col[data[i].r]++;
+            if(data[i].c == c) {
+                assert(H->start_rows[c] <= data[i].r);
+                assert(data[i].r < H->end_rows[c]);
+                col[data[i].r]++;
+            }
         }
-        for(r= H->start_rows[c]; r < H->end_rows[c]; r++) {
+        for(r= H->start_rows[c]; r < H->end_rows[c] && r < H->end_row; r++) {
             int ri= r - H->start_rows[c];
 
             if(col[r] != H->entries[c][ri]) {
