@@ -132,7 +132,7 @@ HIST_TEST_TARGETS= \
 	./capacity $< 1e-3 > $@
 
 %.sim: %.cm sample_error
-	./sample_error $< 100 10 1e-3 1 0 1 > $@
+	./sample_error $< 10 10 1e-3 1 0 1 > $@
 
 %.hist_test: %.samples.xz test_hist
 	xzcat $< | ./test_hist > $@
