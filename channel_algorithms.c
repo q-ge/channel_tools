@@ -14,7 +14,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "fastexp.h"
 #include "log.h"
 #include "sparse.h"
 
@@ -117,7 +116,7 @@ blahut_arimoto(csc_mat_t *Q, float epsilon, float *e_obs) {
             /* Update Il.  By taking out the largest element of c, the
              * rest are all less than 1. */
             for(row= 0; row < p->length; row++) {
-                tmp+= p->entries[row] * exp2f_fast(c->entries[row] - Iu);
+                tmp+= p->entries[row] * exp2f(c->entries[row] - Iu);
             }
             Il= Iu + log2f_table(tmp);
         }
@@ -137,7 +136,7 @@ blahut_arimoto(csc_mat_t *Q, float epsilon, float *e_obs) {
 
         /* Update input distribution.  Here again, we avoid overflow. */
         for(i= 0; i < p->length; i++) {
-            p->entries[i]*= exp2f_fast(c->entries[i] - Il);
+            p->entries[i]*= exp2f(c->entries[i] - Il);
         }
 
         /* Again, prevent the sum from wandering. */

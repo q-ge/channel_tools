@@ -70,7 +70,7 @@ analyse: analyse.o ${SPARSE_OBJS}
 
 analyse_mat: analyse_mat.o ${SPARSE_OBJS}
 
-capacity: capacity.o channel_algorithms.o ${SPARSE_OBJS} log.o fastexp.o
+capacity: capacity.o channel_algorithms.o ${SPARSE_OBJS} log.o
 capacity: LDFLAGS += -lm -lrt -lpthread
 
 mvec: mvec.o
@@ -93,7 +93,7 @@ stride: stride.o ${SPARSE_OBJS}
 
 sample_error: LDFLAGS+= -lm -lrt -lpthread
 sample_error: sample_error.o ${SPARSE_OBJS} channel_algorithms.o \
-              log.o fastexp.o ${dSFMT_SRC}/dSFMT.o
+              log.o ${dSFMT_SRC}/dSFMT.o
 
 channel_hist: channel_hist.o ${SPARSE_OBJS}
 
