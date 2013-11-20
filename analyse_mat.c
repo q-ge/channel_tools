@@ -5,7 +5,7 @@
    This code is experimental, and error-handling is primitive.
 */
 
-/* @LICENSE(NICTA) */
+/* Copyright 2013, NICTA.  See COPYRIGHT for license details. */
 
 #include <assert.h>
 #include <limits.h>
