@@ -115,6 +115,7 @@ ifdef BIGMEM
 endif
 
 TEST_TARGETS= \
+    $(patsubst %,test/%.cm,${TEST_MATRICES}) \
     $(patsubst %,test/%.plot,${TEST_MATRICES}) \
     $(patsubst %,test/%.capacity,${TEST_MATRICES}) \
     $(patsubst %,test/%.sim,${TEST_MATRICES})
@@ -144,4 +145,4 @@ test: ${TEST_TARGETS} ${HIST_TEST_TARGETS} test_sparse
 
 clean:
 	rm -f *.o ${dSFMT_SRC}/*.o ${EXECUTABLES} ${DEBUG_EXECUTABLES} \
-              ${TESTS} cpu.mk ${TEST_TARGETS}
+              cpu.mk ${TEST_TARGETS}
